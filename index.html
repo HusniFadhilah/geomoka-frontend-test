@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEE Land Cover & Vegetation Analysis</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-color: #1e88e5;
+            --secondary-color: #43a047;
+            --danger-color: #e53935;
+            --warning-color: #fb8c00;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1565c0 100%);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+        }
+
+        #map,
+        .result-map {
+            height: 500px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .result-map {
+            height: 600px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1565c0 100%);
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            background: #1565c0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(30, 136, 229, 0.3);
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 15px;
+        }
+
+        .metric-card .metric-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: var(--primary-color);
+            opacity: .9;
+        }
+
+        .metric-card .metric-value small {
+            font-size: .7em;
+            color: #7a7a7a;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .index-badge {
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid #ddd;
+            background: white;
+            display: inline-block;
+            margin: 5px;
+        }
+
+        .index-badge.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 16px;
+            border-radius: 3px;
+            margin-right: 8px;
+            border: 1px solid #666;
+        }
+
+        .gee-tile-layer {
+            opacity: 0.8;
+        }
+
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-dot.online {
+            background: #4caf50;
+            box-shadow: 0 0 10px #4caf50;
+        }
+
+        .status-dot.offline {
+            background: #f44336;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fas fa-globe"></i> GEE Land Cover & Vegetation Analysis
+            </span>
+            <span class="badge bg-light text-dark" id="eeStatus">
+                <i class="fas fa-spinner fa-spin"></i> Checking...
+            </span>
+        </div>
+    </nav>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h5 id="loadingText">Processing data...</h5>
+            <p class="text-muted" id="loadingSubtext">Please wait</p>
+            <div class="progress mt-3" style="width: 300px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" id="loadingProgress"
+                    role="progressbar" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connection Status -->
+    <div class="connection-status" id="connectionStatus">
+        <span class="status-dot offline"></span>
+        <span class="text-muted">Connecting...</span>
+    </div>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-3">
+                <div class="sidebar">
+                    <h5 class="mb-3"><i class="fas fa-cog"></i> Settings</h5>
+
+                    <!-- Analysis Type -->
+                    <div class="mb-3">
+                        <label class="form-label">Analysis Type</label>
+                        <select class="form-select" id="analysisType">
+                            <option value="vegetation">Vegetation Indices</option>
+                            <option value="landcover">Land Cover</option>
+                            <option value="combined">Combined Analysis</option>
+                        </select>
+                    </div>
+
+                    <!-- Year -->
+                    <div class="mb-3">
+                        <label class="form-label">Year</label>
+                        <input type="range" class="form-range" id="yearSlider" min="2017" max="2025" value="2022">
+                        <div class="text-center"><strong id="yearValue">2022</strong></div>
+                    </div>
+
+                    <!-- Zoom -->
+                    <div class="mb-3">
+                        <label class="form-label">Map Zoom</label>
+                        <input type="range" class="form-range" id="zoomSlider" min="5" max="15" value="10">
+                        <div class="text-center"><strong id="zoomValue">10</strong></div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Vegetation Parameters -->
+                    <div id="vegetationParams">
+                        <h6 class="mb-3"><i class="fas fa-leaf"></i> Sentinel-2 Parameters</h6>
+
+                        <div class="mb-3">
+                            <label class="form-label">Month Range</label>
+                            <div class="d-flex gap-2">
+                                <select class="form-select" id="startMonth">
+                                    <option value="1">Jan</option>
+                                    <option value="2">Feb</option>
+                                    <option value="3">Mar</option>
+                                    <option value="4">Apr</option>
+                                    <option value="5">May</option>
+                                    <option value="6" selected>Jun</option>
+                                    <option value="7">Jul</option>
+                                    <option value="8">Aug</option>
+                                    <option value="9">Sep</option>
+                                    <option value="10">Oct</option>
+                                    <option value="11">Nov</option>
+                                    <option value="12">Dec</option>
+                                </select>
+                                <span class="align-self-center">to</span>
+                                <select class="form-select" id="endMonth">
+                                    <option value="1">Jan</option>
+                                    <option value="2">Feb</option>
+                                    <option value="3">Mar</option>
+                                    <option value="4">Apr</option>
+                                    <option value="5">May</option>
+                                    <option value="6">Jun</option>
+                                    <option value="7">Jul</option>
+                                    <option value="8">Aug</option>
+                                    <option value="9" selected>Sep</option>
+                                    <option value="10">Oct</option>
+                                    <option value="11">Nov</option>
+                                    <option value="12">Dec</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Cloud Threshold (%)</label>
+                            <input type="range" class="form-range" id="cloudSlider" min="0" max="100" value="40">
+                            <div class="text-center"><strong id="cloudValue">40</strong>%</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Vegetation Indices</label>
+                            <div id="indicesContainer">
+                                <span class="index-badge active" data-index="NDVI">NDVI</span>
+                                <span class="index-badge active" data-index="NDWI">NDWI</span>
+                                <span class="index-badge active" data-index="MNDWI">MNDWI</span>
+                                <span class="index-badge active" data-index="NDBI">NDBI</span>
+                                <span class="index-badge" data-index="EVI">EVI</span>
+                                <span class="index-badge" data-index="SAVI">SAVI</span>
+                                <span class="index-badge" data-index="BSI">BSI</span>
+                                <span class="index-badge" data-index="NDMI">NDMI</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Land Cover Parameters -->
+                    <div id="landcoverParams" style="display: none;">
+                        <h6 class="mb-3"><i class="fas fa-map"></i> Land Cover Datasets</h6>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="dynamicWorld" checked>
+                            <label class="form-check-label" for="dynamicWorld">
+                                Dynamic World
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="esaWorld">
+                            <label class="form-check-label" for="esaWorld">
+                                ESA WorldCover
+                            </label>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Dynamic World Mode</label>
+                            <select class="form-select" id="dwMode">
+                                <option value="mode">Mode (Most Common)</option>
+                                <option value="hillshade">Hillshade</option>
+                                <option value="probability">Probability</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary w-100 mt-3" id="runAnalysis">
+                        <i class="fas fa-play"></i> Run Analysis
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-lg-9">
+                <div class="main-content">
+                    <!-- AOI Selection -->
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-map-marker-alt"></i> Area of Interest (AOI)
+                        </div>
+                        <div class="card-body">
+                            <ul class="nav nav-tabs mb-3">
+                                <li class="nav-item">
+                                    <a class="nav-link active" data-bs-toggle="tab" href="#aoiAdmin">Indonesia Admin</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#aoiCoord">Coordinates</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#aoiDraw">Draw on Map</a>
+                                </li>
+                            </ul>
+
+                            <div class="tab-content">
+                                <!-- Indonesia Admin Tab -->
+                                <div class="tab-pane fade show active" id="aoiAdmin">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Province</label>
+                                            <select class="form-select" id="provinceSelect">
+                                                <option value="">-- Loading... --</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">City/Regency</label>
+                                            <select class="form-select" id="citySelect" disabled>
+                                                <option value="">-- Select Province First --</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-success" id="loadRegion">
+                                        <i class="fas fa-check"></i> Load Region
+                                    </button>
+                                </div>
+
+                                <!-- Coordinates Tab -->
+                                <div class="tab-pane fade" id="aoiCoord">
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Latitude</label>
+                                            <input type="number" class="form-control" id="latitude" value="-6.9667"
+                                                step="0.0001">
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Longitude</label>
+                                            <input type="number" class="form-control" id="longitude" value="110.4167"
+                                                step="0.0001">
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Buffer (km)</label>
+                                            <input type="number" class="form-control" id="buffer" value="10" min="1"
+                                                max="50">
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-success" id="setCoordAOI">
+                                        <i class="fas fa-check"></i> Set AOI
+                                    </button>
+                                </div>
+
+                                <!-- Draw Tab -->
+                                <div class="tab-pane fade" id="aoiDraw">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle"></i> Draw a polygon on the map below, then click
+                                        "Use Drawn AOI"
+                                    </div>
+                                    <button class="btn btn-success" id="useDrawnAOI">
+                                        <i class="fas fa-check"></i> Use Drawn AOI
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- AOI Map -->
+                            <div id="map" class="mt-3"></div>
+
+                            <!-- AOI Info -->
+                            <div id="aoiInfo" class="mt-3" style="display: none;">
+                                <div class="alert alert-success">
+                                    <h6><i class="fas fa-check-circle"></i> AOI Selected</h6>
+                                    <p class="mb-0">Region: <strong id="regionName">-</strong></p>
+                                    <p class="mb-0">Area: <strong id="regionArea">-</strong> km²</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Section -->
+                    <div id="resultsSection" style="display: none;">
+                        <!-- Results Map -->
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-globe"></i> Results Map
+                            </div>
+                            <div class="card-body">
+                                <ul class="nav nav-tabs mb-3" id="resultTabs">
+                                    <!-- Dynamically populated -->
+                                </ul>
+                                <div id="resultMapContainer" class="result-map"></div>
+                            </div>
+                        </div>
+
+                        <!-- Statistics -->
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-chart-bar"></i> Statistics
+                            </div>
+                            <div class="card-body">
+                                <!-- Metrics -->
+                                <div class="row" id="metricsContainer">
+                                    <!-- Dynamically populated -->
+                                </div>
+
+                                <!-- Stats Table -->
+                                <div class="table-responsive mt-4">
+                                    <table class="table table-striped table-hover" id="statsTable">
+                                        <thead class="table-primary">
+                                            <tr>
+                                                <th>Index</th>
+                                                <th>Min</th>
+                                                <th>Mean</th>
+                                                <th>Max</th>
+                                                <th>Std Dev</th>
+                                                <th>Description</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody><!-- Dynamically populated --></tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Land Cover Stats (hidden by default) -->
+                                <div id="landcoverStats" class="mt-4" style="display:none;">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 id="lcTitle" class="mb-2">Dynamic World</h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-striped table-hover" id="lcTable">
+                                                    <thead class="table-primary">
+                                                        <tr>
+                                                            <th>Class</th>
+                                                            <th>Area (ha)</th>
+                                                            <th>Percentage</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody><!-- injected --></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="mb-2" id="lcChartTitle">Distribusi Land Cover</h6>
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <canvas id="lcPie"></canvas>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Charts -->
+                                <div id="vegCharts" class="row mt-4" style="display:none;">
+                                    <div class="col-md-6">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <canvas id="meanChart"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <canvas id="rangeChart"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Export Options -->
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-download"></i> Export Results
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-2">
+                                        <button class="btn btn-primary w-100" id="exportGeoTIFF">
+                                            <i class="fas fa-file-image"></i> Export GeoTIFF
+                                        </button>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <button class="btn btn-primary w-100" id="downloadStats">
+                                            <i class="fas fa-file-code"></i> Download Statistics
+                                        </button>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <button class="btn btn-primary w-100" id="generateReport">
+                                            <i class="fas fa-file-alt"></i> Generate Report
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+    <script>
+        // ==========================================
+        // CONFIGURATION
+        // ==========================================
+        const API_BASE_URL = 'https://backend.geomoka.husnifd.my.id/api';  // Change this to your backend URL
+        // const API_BASE_URL = 'http://154.12.231.185:8086/api';  // Change this to your backend URL
+        // const API_BASE_URL = 'http://localhost:5000/api';  // Change this to your backend URL
+
+        // Global variables
+        let map, resultMap;
+        let drawnItems = new L.FeatureGroup();
+        let currentAOI = null;
+        let selectedIndices = ['NDVI', 'NDWI', 'MNDWI', 'NDBI'];
+        let analysisResults = {};
+        let geeTileLayers = {};
+        let charts = {};
+        let legendControl = null;
+        charts.landcoverPie = null;
+
+        const ESA_WORLDCOVER_LEGEND = {
+            "Trees": "#006400",
+            "Shrubland": "#ffbb22",
+            "Grassland": "#ffff4c",
+            "Cropland": "#f096ff",
+            "Built-up": "#fa0000",
+            "Barren/sparse vegetation": "#b4b4b4",
+            "Snow and ice": "#f0f0f0",
+            "Open water": "#0032c8",
+            "Herbaceous wetland": "#0096a0",
+            "Mangroves": "#00cf75",
+            "Moss and lichen": "#fae6a0"
+        };
+
+        // ==========================================
+        // API CLIENT
+        // ==========================================
+        class GEEApiClient {
+            constructor(baseURL) {
+                this.baseURL = baseURL;
+                this.timeout = 120000;
+            }
+
+            async request(endpoint, options = {}) {
+                const url = `${this.baseURL}${endpoint}`;
+
+                try {
+                    const response = await $.ajax({
+                        url: url,
+                        method: options.method || 'GET',
+                        data: options.data ? JSON.stringify(options.data) : undefined,
+                        contentType: 'application/json',
+                        timeout: this.timeout,
+                        dataType: 'json'
+                    });
+
+                    return { success: true, data: response };
+                } catch (error) {
+                    console.error('API Request Error:', error);
+                    return {
+                        success: false,
+                        error: error.responseJSON?.error || error.statusText || 'Network error'
+                    };
+                }
+            }
+
+            async healthCheck() {
+                return await this.request('/health');
+            }
+
+            async getProvinces() {
+                return await this.request('/regions/provinces');
+            }
+
+            async getCities(provinceCode) {
+                return await this.request(`/regions/cities?province_code=${provinceCode}`);
+            }
+
+            async getRegionGeometry(endpoint, code) {
+                return await this.request(`/regions/geometry?endpoint=${endpoint}&code=${code}`);
+            }
+
+            async analyzeVegetation(params) {
+                return await this.request('/analyze/vegetation', {
+                    method: 'POST',
+                    data: params
+                });
+            }
+
+            async analyzeLandCover(params) {
+                return await this.request('/analyze/landcover', {
+                    method: 'POST',
+                    data: params
+                });
+            }
+
+            async exportToDrive(params) {
+                return await this.request('/export', {
+                    method: 'POST',
+                    data: params
+                });
+            }
+        }
+
+        const apiClient = new GEEApiClient(API_BASE_URL);
+
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        $(document).ready(async function () {
+            console.log('🚀 Initializing GEE Analysis Platform...');
+
+            initializeMap();
+            initializeEventHandlers();
+            updateParameterVisibility();
+
+            // Check backend connection
+            await checkBackendConnection();
+
+            // Load provinces
+            await loadProvinces();
+
+            console.log('✓ Initialization complete');
+        });
+
+        // ==========================================
+        // MAP INITIALIZATION
+        // ==========================================
+        function initializeMap() {
+            // AOI Selection Map
+            map = L.map('map').setView([-6.9667, 110.4167], 10);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18
+            }).addTo(map);
+
+            // Add draw controls
+            map.addLayer(drawnItems);
+
+            const drawControl = new L.Control.Draw({
+                edit: {
+                    featureGroup: drawnItems
+                },
+                draw: {
+                    polygon: true,
+                    rectangle: true,
+                    circle: false,
+                    marker: false,
+                    circlemarker: false,
+                    polyline: false
+                }
+            });
+            map.addControl(drawControl);
+
+            // Handle drawn shapes
+            map.on(L.Draw.Event.CREATED, function (e) {
+                drawnItems.clearLayers();
+                drawnItems.addLayer(e.layer);
+            });
+
+            console.log('✓ Map initialized');
+        }
+
+        // ==========================================
+        // EVENT HANDLERS
+        // ==========================================
+        function initializeEventHandlers() {
+            // Sliders
+            $('#yearSlider').on('input', function () {
+                $('#yearValue').text($(this).val());
+            });
+
+            $('#zoomSlider').on('input', function () {
+                const zoom = parseInt($(this).val());
+                $('#zoomValue').text(zoom);
+                if (map) map.setZoom(zoom);
+            });
+
+            $('#cloudSlider').on('input', function () {
+                $('#cloudValue').text($(this).val());
+            });
+
+            // Analysis type change
+            $('#analysisType').on('change', function () {
+                updateParameterVisibility();
+            });
+
+            // Index selection
+            $('.index-badge').on('click', function () {
+                $(this).toggleClass('active');
+                updateSelectedIndices();
+            });
+
+            // Province selection
+            $('#provinceSelect').on('change', async function () {
+                const provinceCode = $(this).val();
+                if (provinceCode) {
+                    await loadCities(provinceCode);
+                    $('#citySelect').prop('disabled', false);
+                } else {
+                    $('#citySelect').prop('disabled', true).html('<option value="">-- Select Province First --</option>');
+                }
+            });
+
+            // Load Region button
+            $('#loadRegion').on('click', async function () {
+                await loadRegionGeometry();
+            });
+
+            // Set Coordinate AOI
+            $('#setCoordAOI').on('click', function () {
+                setCoordinateAOI();
+            });
+
+            // Use Drawn AOI
+            $('#useDrawnAOI').on('click', function () {
+                useDrawnPolygon();
+            });
+
+            // Run Analysis
+            $('#runAnalysis').on('click', async function () {
+                await runCompleteAnalysis();
+            });
+
+            // Export buttons
+            $('#exportGeoTIFF').on('click', async function () {
+                await exportToGoogleDrive();
+            });
+
+            $('#downloadStats').on('click', function () {
+                downloadStatistics();
+            });
+
+            $('#generateReport').on('click', function () {
+                generateReport();
+            });
+        }
+
+        // ==========================================
+        // BACKEND CONNECTION
+        // ==========================================
+        async function checkBackendConnection() {
+            updateConnectionStatus('Connecting...', false);
+
+            const response = await apiClient.healthCheck();
+
+            if (response.success && response.data.ee_initialized) {
+                updateConnectionStatus('Connected', true);
+                $('#eeStatus').html('<i class="fas fa-check-circle"></i> Earth Engine Ready');
+                showAlert('Backend connected successfully!', 'success', 3000);
+            } else {
+                updateConnectionStatus('Offline', false);
+                $('#eeStatus').html('<i class="fas fa-times-circle"></i> Backend Offline');
+                showAlert('Warning: Backend not connected. Please check your server.', 'danger', 5000);
+            }
+        }
+
+        function updateConnectionStatus(text, isOnline) {
+            const statusDot = $('#connectionStatus .status-dot');
+            const statusText = $('#connectionStatus span:last-child');
+
+            if (isOnline) {
+                statusDot.removeClass('offline').addClass('online');
+            } else {
+                statusDot.removeClass('online').addClass('offline');
+            }
+
+            statusText.text(text);
+        }
+
+        // ==========================================
+        // PROVINCES & CITIES
+        // ==========================================
+        async function loadProvinces() {
+            showLoading('Loading provinces...', 'Fetching from server');
+
+            const response = await apiClient.getProvinces();
+
+            hideLoading();
+
+            if (response.success) {
+                const provinceSelect = $('#provinceSelect');
+                provinceSelect.html('<option value="">-- Select Province --</option>');
+
+                for (const [name, code] of Object.entries(response.data)) {
+                    provinceSelect.append(`<option value="${code}">${name}</option>`);
+                }
+
+                console.log(`✓ Loaded ${Object.keys(response.data).length} provinces`);
+            } else {
+                showAlert('Failed to load provinces: ' + response.error, 'danger');
+                $('#provinceSelect').html('<option value="">-- Error loading provinces --</option>');
+            }
+        }
+
+        async function loadCities(provinceCode) {
+            showLoading('Loading cities...', 'Fetching from server');
+
+            const response = await apiClient.getCities(provinceCode);
+
+            hideLoading();
+
+            if (response.success) {
+                const citySelect = $('#citySelect');
+                citySelect.html('<option value="">-- Select City --</option>');
+                citySelect.append('<option value="use_province">-- Use Province Boundary --</option>');
+
+                for (const [name, code] of Object.entries(response.data)) {
+                    citySelect.append(`<option value="${code}">${name}</option>`);
+                }
+
+                console.log(`✓ Loaded ${Object.keys(response.data).length} cities`);
+            } else {
+                showAlert('Failed to load cities: ' + response.error, 'danger');
+            }
+        }
+
+        // --- Helper: balik [lat, lon, ...] -> [lon, lat, ...]
+        function swapPosition(pos) {
+            if (Array.isArray(pos) && pos.length >= 2 &&
+                typeof pos[0] === 'number' && typeof pos[1] === 'number') {
+                // Pertahankan dimensi selanjutnya (mis. altitude)
+                return [pos[1], pos[0], ...pos.slice(2)];
+            }
+            return pos;
+        }
+
+        function swapGeometry(geom) {
+            if (!geom) return geom;
+
+            switch (geom.type) {
+                case 'Point':
+                    geom.coordinates = swapPosition(geom.coordinates);
+                    break;
+                case 'MultiPoint':
+                case 'LineString':
+                    geom.coordinates = geom.coordinates.map(swapPosition);
+                    break;
+                case 'MultiLineString':
+                case 'Polygon':
+                    geom.coordinates = geom.coordinates.map(ring => ring.map(swapPosition));
+                    break;
+                case 'MultiPolygon':
+                    geom.coordinates = geom.coordinates.map(polygon =>
+                        polygon.map(ring => ring.map(swapPosition))
+                    );
+                    break;
+                case 'GeometryCollection':
+                    geom.geometries = geom.geometries.map(swapGeometry);
+                    break;
+            }
+            return geom;
+        }
+
+        function swapGeoJSON(gj) {
+            // deep clone agar data asli tak berubah
+            const copy = JSON.parse(JSON.stringify(gj));
+
+            if (copy.type === 'FeatureCollection') {
+                copy.features = copy.features.map(f => {
+                    f.geometry = swapGeometry(f.geometry);
+                    return f;
+                });
+            } else if (copy.type === 'Feature') {
+                copy.geometry = swapGeometry(copy.geometry);
+            } else {
+                return swapGeometry(copy);
+            }
+            return copy;
+        }
+
+        async function loadRegionGeometry() {
+            const provinceCode = $('#provinceSelect').val();
+            const cityCode = $('#citySelect').val();
+
+            if (!provinceCode) {
+                showAlert('Please select a province', 'warning');
+                return;
+            }
+
+            let endpoint, code, name;
+            if (cityCode && cityCode !== 'use_province') {
+                endpoint = 'city';
+                code = cityCode;
+                name = $('#citySelect option:selected').text();
+            } else {
+                endpoint = 'province';
+                code = provinceCode;
+                name = $('#provinceSelect option:selected').text();
+            }
+
+            showLoading(`Loading ${name} geometry...`, 'Fetching boundary data from API');
+
+            const response = await apiClient.getRegionGeometry(endpoint, code);
+
+            hideLoading();
+
+            if (response.success && response.data) {
+                // 1) Ambil GeoJSON asli
+                const geojsonOriginal = response.data;
+
+                // 2) Balik lat-lon pada geometry
+                const geojson = swapGeoJSON(geojsonOriginal);
+
+                // 3) Render di Leaflet
+                drawnItems.clearLayers();
+
+                const geoJsonLayer = L.geoJSON(geojson, {
+                    style: {
+                        color: 'blue',
+                        fillColor: 'lightblue',
+                        fillOpacity: 0.3,
+                        weight: 2
+                    }
+                });
+
+                geoJsonLayer.addTo(drawnItems);
+                map.fitBounds(geoJsonLayer.getBounds());
+
+                // 4) Hitung area dsb.
+                const bounds = geoJsonLayer.getBounds();
+                const area = calculateAreaFromBounds(bounds);
+
+                currentAOI = {
+                    type: 'admin',
+                    name: name,
+                    geometry: bounds,
+                    area: area,
+                    geojson: geojson
+                };
+
+                showAOIInfo();
+                showAlert(`${name} loaded successfully!`, 'success');
+                console.log('✓ Region geometry loaded:', name);
+            } else {
+                showAlert('Failed to load region geometry: ' + (response.error || 'Unknown error'), 'danger');
+            }
+        }
+
+        // ==========================================
+        // AOI METHODS
+        // ==========================================
+        function setCoordinateAOI() {
+            const lat = parseFloat($('#latitude').val());
+            const lon = parseFloat($('#longitude').val());
+            const buffer = parseFloat($('#buffer').val());
+
+            if (isNaN(lat) || isNaN(lon) || isNaN(buffer)) {
+                showAlert('Please enter valid coordinates and buffer', 'warning');
+                return;
+            }
+
+            showLoading('Creating AOI...', 'Calculating buffer zone');
+
+            setTimeout(() => {
+                const bufferDeg = buffer / 111;
+                const bounds = [
+                    [lat - bufferDeg, lon - bufferDeg],
+                    [lat - bufferDeg, lon + bufferDeg],
+                    [lat + bufferDeg, lon + bufferDeg],
+                    [lat + bufferDeg, lon - bufferDeg],
+                    [lat - bufferDeg, lon - bufferDeg]
+                ];
+
+                drawnItems.clearLayers();
+                const polygon = L.polygon(bounds, { color: 'green', fillOpacity: 0.3 });
+                drawnItems.addLayer(polygon);
+
+                L.marker([lat, lon]).addTo(drawnItems);
+
+                map.setView([lat, lon], parseInt($('#zoomValue').text()));
+
+                currentAOI = {
+                    type: 'coordinate',
+                    name: `Point (${lat.toFixed(4)}, ${lon.toFixed(4)})`,
+                    geometry: polygon.getBounds(),
+                    area: calculateAreaFromBounds(polygon.getBounds())
+                };
+
+                showAOIInfo();
+                hideLoading();
+                showAlert('AOI set successfully!', 'success');
+            }, 500);
+        }
+
+        function useDrawnPolygon() {
+            if (drawnItems.getLayers().length === 0) {
+                showAlert('Please draw a polygon on the map first', 'warning');
+                return;
+            }
+
+            const layer = drawnItems.getLayers()[0];
+            const bounds = layer.getBounds();
+
+            currentAOI = {
+                type: 'drawn',
+                name: 'Custom Polygon',
+                geometry: bounds,
+                area: calculateAreaFromBounds(bounds)
+            };
+
+            showAOIInfo();
+            showAlert('Custom polygon set as AOI!', 'success');
+        }
+
+        function calculateAreaFromBounds(bounds) {
+            const latDiff = Math.abs(bounds.getSouth() - bounds.getNorth());
+            const lonDiff = Math.abs(bounds.getWest() - bounds.getEast());
+            return (latDiff * 111 * lonDiff * 111 * Math.cos(bounds.getCenter().lat * Math.PI / 180)).toFixed(2);
+        }
+
+        function showAOIInfo() {
+            $('#regionName').text(currentAOI.name);
+            $('#regionArea').text(currentAOI.area);
+            $('#aoiInfo').slideDown();
+        }
+
+        // ==========================================
+        // ANALYSIS
+        // ==========================================
+        async function runCompleteAnalysis() {
+            if (!currentAOI) {
+                showAlert('Please select an AOI first', 'warning');
+                return;
+            }
+
+            const analysisType = $('#analysisType').val();
+            analysisResults = {};
+
+            try {
+                // Run vegetation analysis
+                if (analysisType === 'vegetation' || analysisType === 'combined') {
+                    showLoading('Analyzing vegetation indices...', 'Processing Sentinel-2 imagery from Google Earth Engine', 20);
+                    const vegData = await runVegetationAnalysis();
+                    if (vegData) {
+                        analysisResults.vegetation = vegData;
+                    }
+                }
+
+                // Run land cover analysis
+                if (analysisType === 'landcover' || analysisType === 'combined') {
+                    showLoading('Analyzing land cover...', 'Processing land cover datasets from Google Earth Engine', 60);
+                    const lcData = await runLandCoverAnalysis();
+                    if (lcData) {
+                        analysisResults.landcover = lcData;
+                    }
+                }
+
+                hideLoading();
+
+                // Display results if we have any
+                if (Object.keys(analysisResults).length > 0) {
+                    displayResults();
+                    showAlert('Analysis completed successfully!', 'success');
+
+                    // Scroll to results
+                    $('html, body').animate({
+                        scrollTop: $('#resultsSection').offset().top - 100
+                    }, 500);
+                } else {
+                    showAlert('No analysis results available', 'warning');
+                }
+
+            } catch (error) {
+                hideLoading();
+                console.error('Analysis error:', error);
+                showAlert('An error occurred during analysis: ' + error.message, 'danger');
+            }
+        }
+
+        async function runVegetationAnalysis() {
+            const params = {
+                aoi: currentAOI.geojson ? { geojson: currentAOI.geojson } : {
+                    west: currentAOI.geometry.getWest(),
+                    south: currentAOI.geometry.getSouth(),
+                    east: currentAOI.geometry.getEast(),
+                    north: currentAOI.geometry.getNorth()
+                },
+                year: parseInt($('#yearValue').text()),
+                start_month: parseInt($('#startMonth').val()),
+                end_month: parseInt($('#endMonth').val()),
+                cloud_threshold: parseInt($('#cloudValue').text()),
+                indices: selectedIndices
+            };
+
+            console.log('Vegetation analysis params:', params);
+
+            const response = await apiClient.analyzeVegetation(params);
+
+            if (response.success) {
+                console.log('✓ Vegetation analysis complete:', response.data);
+                return response.data;
+            } else {
+                showAlert('Vegetation analysis failed: ' + response.error, 'danger');
+                return null;
+            }
+        }
+
+        async function runLandCoverAnalysis() {
+            const datasets = [];
+            if ($('#dynamicWorld').is(':checked')) datasets.push('Dynamic_World');
+            if ($('#esaWorld').is(':checked')) datasets.push('ESA_WorldCover');
+
+            if (datasets.length === 0) {
+                showAlert('Please select at least one land cover dataset', 'warning');
+                return null;
+            }
+
+            const params = {
+                aoi: currentAOI.geojson ? { geojson: currentAOI.geojson } : {
+                    west: currentAOI.geometry.getWest(),
+                    south: currentAOI.geometry.getSouth(),
+                    east: currentAOI.geometry.getEast(),
+                    north: currentAOI.geometry.getNorth()
+                },
+                year: parseInt($('#yearValue').text()),
+                datasets,
+                dw_mode: $('#dwMode').val()
+            };
+
+            console.log('Land cover analysis params:', params);
+
+            const response = await apiClient.analyzeLandCover(params);
+
+            if (response.success) {
+                console.log('✓ Land cover analysis complete:', response.data);
+                return response.data;
+            } else {
+                showAlert('Land cover analysis failed: ' + response.error, 'danger');
+                return null;
+            }
+        }
+
+        // ==========================================
+        // DISPLAY RESULTS
+        // ==========================================
+        function updateLegend(layerName) {
+            if (legendControl) { legendControl.remove(); legendControl = null; }
+            legendControl = L.control({ position: 'bottomright' });
+            legendControl.onAdd = function () {
+                const div = L.DomUtil.create('div', 'legend');
+                div.innerHTML = '<h6 style="margin-bottom:10px;font-weight:bold;">Legend</h6>';
+
+                if (layerName === 'Dynamic_World' && analysisResults.landcover?.Dynamic_World?.classes) {
+                    for (const [nm, d] of Object.entries(analysisResults.landcover.Dynamic_World.classes)) {
+                        div.innerHTML += `<div class="legend-item"><span class="legend-color" style="background:${d.color}"></span>${nm}</div>`;
+                    }
+                } else if (layerName === 'ESA_WorldCover') {
+                    const classes = analysisResults.landcover?.ESA_WorldCover?.classes;
+                    if (classes) {
+                        for (const [nm, d] of Object.entries(classes)) {
+                            div.innerHTML += `<div class="legend-item"><span class="legend-color" style="background:${d.color}"></span>${nm}</div>`;
+                        }
+                    } else {
+                        // fallback statis
+                        for (const [nm, color] of Object.entries(ESA_WORLDCOVER_LEGEND)) {
+                            div.innerHTML += `<div class="legend-item"><span class="legend-color" style="background:${color}"></span>${nm}</div>`;
+                        }
+                    }
+                } else {
+                    div.innerHTML += '<div class="text-muted">No legend for this layer</div>';
+                }
+                return div;
+            };
+            legendControl.addTo(resultMap);
+        }
+
+        function displayResults() {
+            $('#resultsSection').slideDown();
+
+            createResultTabs();
+            initializeResultMap();
+            displayStatistics();
+            $('#vegCharts').toggle(!!(analysisResults.vegetation && analysisResults.vegetation.indices));
+            createCharts();
+
+            if (analysisResults.landcover?.Dynamic_World?.classes) {
+                renderLandCoverTableAndChart('Dynamic_World', 'Dynamic World');
+            } else if (analysisResults.landcover?.ESA_WorldCover?.classes) {
+                renderLandCoverTableAndChart('ESA_WorldCover', 'ESA WorldCover');
+            } else {
+                $('#landcoverStats').hide();
+            }
+
+            console.log('✓ Results displayed');
+        }
+
+        function createResultTabs() {
+            const tabsHtml = [];
+            let isFirst = true;
+
+            if (analysisResults.vegetation) {
+                // RGB Composite
+                if (analysisResults.vegetation.rgb_tile_url) {
+                    tabsHtml.push(`
+                        <li class="nav-item">
+                            <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="rgb">
+                                <i class="fas fa-image"></i> RGB
+                            </button>
+                        </li>
+                    `);
+                    isFirst = false;
+                }
+
+                // Indices
+                for (const index in analysisResults.vegetation.indices) {
+                    tabsHtml.push(`
+                        <li class="nav-item">
+                            <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="${index}">
+                                <i class="fas fa-leaf"></i> ${index}
+                            </button>
+                        </li>
+                    `);
+                    isFirst = false;
+                }
+            }
+
+            if (analysisResults.landcover) {
+                for (const dataset in analysisResults.landcover) {
+                    tabsHtml.push(`
+                        <li class="nav-item">
+                            <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="${dataset}">
+                                <i class="fas fa-map"></i> ${dataset.replace('_', ' ')}
+                            </button>
+                        </li>
+                    `);
+                    isFirst = false;
+                }
+            }
+
+            $('#resultTabs').html(tabsHtml.join(''));
+
+            // Handle tab clicks
+            $('#resultTabs button').on('click', function () {
+                const layer = $(this).data('layer');
+                switchResultLayer(layer);
+            });
+        }
+
+        function initializeResultMap() {
+            if (resultMap) {
+                resultMap.remove();
+            }
+
+            const center = currentAOI.geometry.getCenter();
+            resultMap = L.map('resultMapContainer').setView([center.lat, center.lng], parseInt($('#zoomValue').text()));
+
+            // Base layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(resultMap);
+
+            // AOI boundary
+            L.rectangle(currentAOI.geometry, {
+                color: 'red',
+                weight: 2,
+                fillOpacity: 0.1
+            }).addTo(resultMap);
+
+            // Add first layer
+            const firstTab = $('#resultTabs button:first');
+            if (firstTab.length) {
+                switchResultLayer(firstTab.data('layer')); // ini juga akan memanggil updateLegend
+            }
+        }
+
+        function switchResultLayer(layerName) {
+            // Remove existing GEE layers
+            for (const key in geeTileLayers) {
+                if (geeTileLayers[key]) {
+                    resultMap.removeLayer(geeTileLayers[key]);
+                }
+            }
+
+            let tileUrl = null;
+
+            // Get tile URL
+            if (layerName === 'rgb' && analysisResults.vegetation) {
+                tileUrl = analysisResults.vegetation.rgb_tile_url;
+            } else if (analysisResults.vegetation && analysisResults.vegetation.indices[layerName]) {
+                tileUrl = analysisResults.vegetation.indices[layerName].tile_url;
+            } else if (analysisResults.landcover && analysisResults.landcover[layerName]) {
+                tileUrl = analysisResults.landcover[layerName].tile_url;
+            }
+
+            // Add GEE tile layer
+            if (tileUrl) {
+                geeTileLayers[layerName] = L.tileLayer(tileUrl, {
+                    attribution: '© Google Earth Engine',
+                    className: 'gee-tile-layer',
+                    maxZoom: 18
+                }).addTo(resultMap);
+
+                console.log('✓ Loaded GEE layer:', layerName);
+            } else {
+                console.warn('No tile URL for layer:', layerName);
+            }
+
+            updateLegend(layerName);
+        }
+
+        function addLegendToMap() {
+            const legend = L.control({ position: 'bottomright' });
+
+            legend.onAdd = function (map) {
+                const div = L.DomUtil.create('div', 'legend');
+                div.innerHTML = '<h6 style="margin-bottom: 10px; font-weight: bold;">Legend</h6>';
+
+                // Add legend items based on current layer
+                if (analysisResults.landcover && analysisResults.landcover.Dynamic_World) {
+                    const classes = analysisResults.landcover.Dynamic_World.classes;
+                    for (const [className, data] of Object.entries(classes)) {
+                        div.innerHTML += `
+                            <div class="legend-item">
+                                <span class="legend-color" style="background-color: ${data.color}"></span>
+                                ${className}
+                            </div>
+                        `;
+                    }
+                }
+
+                return div;
+            };
+
+            legend.addTo(resultMap);
+        }
+
+        function displayStatistics() {
+            displayMetrics();
+            displayStatsTable();
+        }
+
+        function displayMetrics() {
+            let html = '';
+
+            // Vegetation metrics
+            if (analysisResults.vegetation?.indices) {
+                const indices = analysisResults.vegetation.indices;
+                const vals = Object.values(indices).map(v => Number(v.mean)).filter(Number.isFinite);
+                const imagesFound = analysisResults.vegetation.collection_size || 0;
+                const idxCount = Object.keys(indices).length;
+                const avgMean = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+
+                html += `
+                <div class="col-md-3">
+                    <div class="metric-card">
+                    <div class="metric-icon"><i class="fa-solid fa-images"></i></div>
+                    <div class="metric-value">${imagesFound}</div>
+                    <div class="metric-label">Images Found</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                    <div class="metric-icon"><i class="fa-solid fa-seedling"></i></div>
+                    <div class="metric-value">${idxCount}</div>
+                    <div class="metric-label">Indices Analyzed</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                    <div class="metric-icon"><i class="fa-solid fa-chart-line"></i></div>
+                    <div class="metric-value">${avgMean.toFixed(3)}</div>
+                    <div class="metric-label">Avg Mean Value</div>
+                    </div>
+                </div>
+                `;
+            }
+
+            // Land cover metrics (ambil DW dulu, jika tidak ada pakai ESA)
+            let lcClasses = null;
+            if (analysisResults.landcover?.Dynamic_World?.classes) {
+                lcClasses = analysisResults.landcover.Dynamic_World.classes;
+            } else if (analysisResults.landcover?.ESA_WorldCover?.classes) {
+                lcClasses = analysisResults.landcover.ESA_WorldCover.classes;
+            }
+
+            if (lcClasses) {
+                const totalHa = Object.values(lcClasses)
+                    .reduce((s, c) => s + Number(c.area || 0), 0);
+                html += `
+                <div class="col-md-3">
+                    <div class="metric-card">
+                    <div class="metric-icon"><i class="fa-solid fa-earth-asia"></i></div>
+                    <div class="metric-value">${totalHa.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                        <small>ha</small></div>
+                    <div class="metric-label">Total Area</div>
+                    </div>
+                </div>
+                `;
+            }
+
+            $('#metricsContainer').html(html);
+        }
+
+        function displayStatsTable() {
+            const $tableWrap = $('#statsTable').closest('.table-responsive');
+            const $tbody = $('#statsTable tbody');
+
+            // helper format
+            const fmt = (v, d = 4) => Number.isFinite(Number(v)) ? Number(v).toFixed(d) : '—';
+            const fmtHa = (v, d = 2) => Number.isFinite(Number(v))
+                ? Number(v).toLocaleString(undefined, { maximumFractionDigits: d })
+                : '—';
+            const fmtPct = (v, d = 1) => Number.isFinite(Number(v)) ? Number(v).toFixed(d) + '%' : '—';
+
+            let rows = [];
+
+            // ===== 1) Vegetation indices (jika ada) =====
+            const vegIdx = analysisResults?.vegetation?.indices || null;
+            if (vegIdx && Object.keys(vegIdx).length) {
+                // urutkan biar konsisten
+                const entries = Object.entries(vegIdx).sort((a, b) => a[0].localeCompare(b[0]));
+                for (const [index, stats] of entries) {
+                    rows.push(`
+        <tr>
+          <td><strong>${index}</strong></td>
+          <td>${fmt(stats?.min)}</td>
+          <td><span class="badge bg-primary">${fmt(stats?.mean)}</span></td>
+          <td>${fmt(stats?.max)}</td>
+          <td>${fmt(stats?.std_dev)}</td>
+          <td>${stats?.description ?? '-'}</td>
+        </tr>
+      `);
+                }
+            }
+
+            // render / hide
+            if (rows.length) {
+                $tbody.html(rows.join(''));
+                $tableWrap.show();
+            } else {
+                $tbody.empty();
+                $tableWrap.hide(); // tidak ada data → sembunyikan tabel
+            }
+        }
+
+        function createCharts() {
+            if (analysisResults.vegetation) {
+                createMeanChart();
+                createRangeChart();
+            }
+        }
+
+        function renderLandCoverTableAndChart(datasetKey, datasetLabel) {
+            const bucket = analysisResults.landcover?.[datasetKey];
+            if (!bucket || !bucket.classes) {
+                $('#landcoverStats').hide();
+                return;
+            }
+
+            // ---------- table ----------
+            const classes = bucket.classes;
+            const sorted = Object.entries(classes).sort((a, b) => Number(b[1].area) - Number(a[1].area));
+            const rows = sorted.map(([name, info]) => `
+                <tr>
+                <td><strong>${name}</strong></td>
+                <td>${Number(info.area || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                <td>${Number(info.percentage || 0).toFixed(1)}%</td>
+                </tr>
+            `);
+
+            $('#lcTitle').text(datasetLabel);
+            $('#lcChartTitle').text(`Distribusi ${datasetLabel}`);
+            $('#lcTable tbody').html(rows.join(''));
+            $('#landcoverStats').show();
+
+            // ---------- chart ----------
+            // 1) pastikan canvas fresh (hapus lama, buat baru)
+            const $host = $('#lcPie').parent();
+            $('#lcPie').remove();
+            $host.append('<canvas id="lcPie"></canvas>');
+
+            const canvas = document.getElementById('lcPie');
+            if (!canvas) {
+                console.error('lcPie canvas not found');
+                return;
+            }
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                console.error('Failed to acquire 2D context for lcPie');
+                return;
+            }
+
+            // 2) siapkan data
+            const labels = sorted.map(([n]) => n);
+            const values = sorted.map(([, i]) => Number(i.area || 0));
+            const colors = sorted.map(([, i]) => i.color || '#999');
+
+            // 3) destroy chart lama (jika ada)
+            if (charts.landcoverPie && typeof charts.landcoverPie.destroy === 'function') {
+                charts.landcoverPie.destroy();
+                charts.landcoverPie = null;
+            }
+
+            // 4) buat chart
+            charts.landcoverPie = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels,
+                    datasets: [{ data: values, backgroundColor: colors, borderWidth: 1 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        title: { display: true, text: `Distribusi ${datasetLabel}` },
+                        tooltip: {
+                            callbacks: {
+                                label: (c) => {
+                                    const total = values.reduce((a, b) => a + b, 0) || 1;
+                                    const v = c.parsed;
+                                    const pct = (v / total * 100).toFixed(1);
+                                    return ` ${c.label}: ${v.toLocaleString()} ha (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createMeanChart() {
+            const ctx = document.getElementById('meanChart');
+            if (!ctx) return;
+
+            if (charts.mean) charts.mean.destroy();
+
+            const indices = analysisResults.vegetation.indices;
+            const labels = Object.keys(indices);
+            const data = labels.map(idx => parseFloat(indices[idx].mean));
+
+            charts.mean = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Mean Value',
+                        data: data,
+                        backgroundColor: 'rgba(30, 136, 229, 0.8)',
+                        borderColor: 'rgba(30, 136, 229, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Mean Values of Vegetation Indices'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function createRangeChart() {
+            const ctx = document.getElementById('rangeChart');
+            if (!ctx) return;
+
+            if (charts.range) charts.range.destroy();
+
+            const indices = analysisResults.vegetation.indices;
+            const labels = Object.keys(indices);
+
+            charts.range = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Min',
+                            data: labels.map(idx => parseFloat(indices[idx].min)),
+                            borderColor: 'rgb(231, 76, 60)',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)'
+                        },
+                        {
+                            label: 'Mean',
+                            data: labels.map(idx => parseFloat(indices[idx].mean)),
+                            borderColor: 'rgb(52, 152, 219)',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            borderWidth: 3
+                        },
+                        {
+                            label: 'Max',
+                            data: labels.map(idx => parseFloat(indices[idx].max)),
+                            borderColor: 'rgb(46, 204, 113)',
+                            backgroundColor: 'rgba(46, 204, 113, 0.1)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Range of Values (Min-Mean-Max)'
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // EXPORT FUNCTIONS
+        // ==========================================
+        async function exportToGoogleDrive() {
+            if (!analysisResults.vegetation && !analysisResults.landcover) {
+                showAlert('No analysis results to export', 'warning');
+                return;
+            }
+
+            showLoading('Exporting to Google Drive...', 'Creating export task');
+
+            const params = {
+                aoi: {
+                    west: currentAOI.geometry.getWest(),
+                    south: currentAOI.geometry.getSouth(),
+                    east: currentAOI.geometry.getEast(),
+                    north: currentAOI.geometry.getNorth()
+                },
+                layer_type: 'vegetation',
+                layer_name: 'NDVI',
+                description: `export_${currentAOI.name.replace(/\s+/g, '_')}_${Date.now()}`
+            };
+
+            const response = await apiClient.exportToDrive(params);
+
+            hideLoading();
+
+            if (response.success) {
+                showAlert('Export task created! Check your Google Earth Engine Tasks.', 'success');
+            } else {
+                showAlert('Export failed: ' + response.error, 'danger');
+            }
+        }
+
+        function downloadStatistics() {
+            const stats = {
+                analysis_date: new Date().toISOString(),
+                region: currentAOI.name,
+                area_km2: currentAOI.area,
+                year: $('#yearValue').text(),
+                analysis_type: $('#analysisType').val(),
+                parameters: {
+                    date_range: {
+                        start_month: $('#startMonth').val(),
+                        end_month: $('#endMonth').val()
+                    },
+                    cloud_threshold: $('#cloudValue').text(),
+                    selected_indices: selectedIndices
+                },
+                results: analysisResults
+            };
+
+            const dataStr = JSON.stringify(stats, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `gee_stats_${currentAOI.name.replace(/\s+/g, '_')}_${Date.now()}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            showAlert('Statistics downloaded successfully!', 'success');
+        }
+
+        function generateReport() {
+            let report = `# GEE Analysis Report\n\n`;
+            report += `**Date:** ${new Date().toLocaleString()}\n`;
+            report += `**Region:** ${currentAOI.name}\n`;
+            report += `**Area:** ${currentAOI.area} km²\n`;
+            report += `**Year:** ${$('#yearValue').text()}\n\n`;
+
+            if (analysisResults.vegetation) {
+                report += `## Vegetation Indices\n\n`;
+                report += `**Images Found:** ${analysisResults.vegetation.collection_size}\n\n`;
+
+                for (const [index, stats] of Object.entries(analysisResults.vegetation.indices)) {
+                    report += `### ${index}\n`;
+                    report += `- Min: ${parseFloat(stats.min).toFixed(4)}\n`;
+                    report += `- Mean: ${parseFloat(stats.mean).toFixed(4)}\n`;
+                    report += `- Max: ${parseFloat(stats.max).toFixed(4)}\n`;
+                    report += `- Std Dev: ${parseFloat(stats.std_dev).toFixed(4)}\n\n`;
+                }
+            }
+
+            if (analysisResults.landcover && analysisResults.landcover.Dynamic_World) {
+                report += `## Land Cover Distribution\n\n`;
+                for (const [className, data] of Object.entries(analysisResults.landcover.Dynamic_World.classes)) {
+                    report += `- **${className}:** ${data.area} ha (${data.percentage}%)\n`;
+                }
+            }
+
+            report += `\n---\n*Generated by GEE Analysis Platform*`;
+
+            const dataBlob = new Blob([report], { type: 'text/markdown' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `gee_report_${currentAOI.name.replace(/\s+/g, '_')}_${Date.now()}.md`;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            showAlert('Report generated successfully!', 'success');
+        }
+
+        // ==========================================
+        // UTILITY FUNCTIONS
+        // ==========================================
+        function updateParameterVisibility() {
+            const analysisType = $('#analysisType').val();
+
+            if (analysisType === 'vegetation') {
+                $('#vegetationParams').show();
+                $('#landcoverParams').hide();
+            } else if (analysisType === 'landcover') {
+                $('#vegetationParams').hide();
+                $('#landcoverParams').show();
+            } else {
+                $('#vegetationParams').show();
+                $('#landcoverParams').show();
+            }
+        }
+
+        function updateSelectedIndices() {
+            selectedIndices = [];
+            $('.index-badge.active').each(function () {
+                selectedIndices.push($(this).data('index'));
+            });
+            console.log('Selected indices:', selectedIndices);
+        }
+
+        function showLoading(mainText, subText, progress = 0) {
+            $('#loadingText').text(mainText);
+            $('#loadingSubtext').text(subText);
+            $('#loadingProgress').css('width', progress + '%');
+            $('#loadingOverlay').css('display', 'flex');
+        }
+
+        function hideLoading() {
+            $('#loadingOverlay').fadeOut();
+        }
+
+        function showAlert(message, type, duration = 5000) {
+            const alertClass = `alert-${type}`;
+            const iconMap = {
+                'success': 'check-circle',
+                'danger': 'exclamation-circle',
+                'warning': 'exclamation-triangle',
+                'info': 'info-circle'
+            };
+
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3" 
+                     role="alert" style="z-index: 9999; min-width: 300px;">
+                    <i class="fas fa-${iconMap[type] || 'info-circle'}"></i> ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+
+            const alertEl = $(alertHtml).appendTo('body');
+            setTimeout(() => alertEl.fadeOut(() => alertEl.remove()), duration);
+        }
+    </script>
+</body>
+
+</html>
