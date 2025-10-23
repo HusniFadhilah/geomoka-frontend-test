@@ -640,6 +640,7 @@
         let geeTileLayers = {};
         let charts = {};
         let legendControl = null;
+        let provinceSelect, citySelect, districtSelect, villageSelect
         charts.landcoverPie = null;
 
         const ESA_WORLDCOVER_LEGEND = {
@@ -857,7 +858,8 @@
 
             // Load Region button
             $('#loadRegion').on('click', async function () {
-                await loadRegionGeometry();
+                if ($('#provinceSelect').val() && $('#citySelect').val() == '') showAlert(`Warning: Please use province boundary or select city`, 'danger', 5000);
+                else await loadRegionGeometry();
             });
 
             // Set Coordinate AOI
@@ -932,7 +934,7 @@
             hideLoading();
 
             if (response.success) {
-                const provinceSelect = $('#provinceSelect');
+                provinceSelect = $('#provinceSelect');
                 provinceSelect.html('<option value="">-- Select Province --</option>');
 
                 for (const [name, code] of Object.entries(response.data)) {
@@ -954,7 +956,7 @@
             hideLoading();
 
             if (response.success) {
-                const citySelect = $('#citySelect');
+                citySelect = $('#citySelect');
                 citySelect.html('<option value="">-- Select City --</option>');
                 citySelect.append('<option value="use_province">-- Use Province Boundary --</option>');
 
@@ -976,7 +978,7 @@
             hideLoading();
 
             if (response.success) {
-                const districtSelect = $('#districtSelect');
+                districtSelect = $('#districtSelect');
                 districtSelect.html('<option value="">-- Select District --</option>');
                 districtSelect.append('<option value="use_city">-- Use City Boundary --</option>');
 
@@ -998,7 +1000,7 @@
             hideLoading();
 
             if (response.success) {
-                const villageSelect = $('#villageSelect');
+                villageSelect = $('#villageSelect');
                 villageSelect.html('<option value="">-- Select Village --</option>');
                 villageSelect.append('<option value="use_district">-- Use District Boundary --</option>');
 
