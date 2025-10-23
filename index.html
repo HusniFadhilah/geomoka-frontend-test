@@ -662,7 +662,7 @@
         class GEEApiClient {
             constructor(baseURL) {
                 this.baseURL = baseURL;
-                this.timeout = 120000;
+                this.timeout = 240000;
             }
 
             async request(endpoint, options = {}) {
@@ -1960,7 +1960,7 @@
             $('#loadingOverlay').fadeOut();
         }
 
-        function showAlert(message, type, duration = 5000) {
+        function showAlert(message, type, duration = 10000) {
             const alertClass = `alert-${type}`;
             const iconMap = {
                 'success': 'check-circle',
