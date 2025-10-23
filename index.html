@@ -425,6 +425,18 @@
                                                 <option value="">-- Select Province First --</option>
                                             </select>
                                         </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">District</label>
+                                            <select class="form-select" id="districtSelect" disabled>
+                                                <option value="">-- Select City First --</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Village</label>
+                                            <select class="form-select" id="villageSelect" disabled>
+                                                <option value="">-- Select District First --</option>
+                                            </select>
+                                        </div>
                                     </div>
                                     <button class="btn btn-success" id="loadRegion">
                                         <i class="fas fa-check"></i> Load Region
@@ -688,6 +700,14 @@
                 return await this.request(`/regions/cities?province_code=${provinceCode}`);
             }
 
+            async getDistricts(cityCode) {
+                return await this.request(`/regions/districts?city_code=${cityCode}`);
+            }
+
+            async getVillages(districtsCode) {
+                return await this.request(`/regions/villages?district_code=${districtsCode}`);
+            }
+
             async getRegionGeometry(endpoint, code) {
                 return await this.request(`/regions/geometry?endpoint=${endpoint}&code=${code}`);
             }
@@ -815,6 +835,26 @@
                 }
             });
 
+            $('#citySelect').on('change', async function () {
+                const cityCode = $(this).val();
+                if (cityCode) {
+                    await loadDistricts(cityCode);
+                    $('#districtSelect').prop('disabled', false);
+                } else {
+                    $('#districtSelect').prop('disabled', true).html('<option value="">-- Select City First --</option>');
+                }
+            });
+
+            $('#districtSelect').on('change', async function () {
+                const districtCode = $(this).val();
+                if (districtCode) {
+                    await loadVillages(districtCode);
+                    $('#villageSelect').prop('disabled', false);
+                } else {
+                    $('#villageSelect').prop('disabled', true).html('<option value="">-- Select District First --</option>');
+                }
+            });
+
             // Load Region button
             $('#loadRegion').on('click', async function () {
                 await loadRegionGeometry();
@@ -928,6 +968,50 @@
             }
         }
 
+        async function loadDistricts(cityCode) {
+            showLoading('Loading district...', 'Fetching from server');
+
+            const response = await apiClient.getDistricts(cityCode);
+
+            hideLoading();
+
+            if (response.success) {
+                const districtSelect = $('#districtSelect');
+                districtSelect.html('<option value="">-- Select District --</option>');
+                districtSelect.append('<option value="use_city">-- Use City Boundary --</option>');
+
+                for (const [name, code] of Object.entries(response.data)) {
+                    districtSelect.append(`<option value="${code}">${name}</option>`);
+                }
+
+                console.log(`✓ Loaded ${Object.keys(response.data).length} cities`);
+            } else {
+                showAlert('Failed to load cities: ' + response.error, 'danger');
+            }
+        }
+
+        async function loadVillages(districtCode) {
+            showLoading('Loading village...', 'Fetching from server');
+
+            const response = await apiClient.getVillages(districtCode);
+
+            hideLoading();
+
+            if (response.success) {
+                const villageSelect = $('#villageSelect');
+                villageSelect.html('<option value="">-- Select Village --</option>');
+                villageSelect.append('<option value="use_district">-- Use District Boundary --</option>');
+
+                for (const [name, code] of Object.entries(response.data)) {
+                    villageSelect.append(`<option value="${code}">${name}</option>`);
+                }
+
+                console.log(`✓ Loaded ${Object.keys(response.data).length} cities`);
+            } else {
+                showAlert('Failed to load cities: ' + response.error, 'danger');
+            }
+        }
+
         // --- Helper: balik [lat, lon, ...] -> [lon, lat, ...]
         function swapPosition(pos) {
             if (Array.isArray(pos) && pos.length >= 2 &&
@@ -985,6 +1069,9 @@
         async function loadRegionGeometry() {
             const provinceCode = $('#provinceSelect').val();
             const cityCode = $('#citySelect').val();
+            const districtCode = $('#districtSelect').val();
+            const villageCode = $('#villageSelect').val();
+            let geojson
 
             if (!provinceCode) {
                 showAlert('Please select a province', 'warning');
@@ -996,7 +1083,18 @@
                 endpoint = 'city';
                 code = cityCode;
                 name = $('#citySelect option:selected').text();
-            } else {
+            }
+            if (districtCode && districtCode !== 'use_city') {
+                endpoint = 'district';
+                code = districtCode;
+                name = $('#districtSelect option:selected').text();
+            }
+            if (villageCode && villageCode !== 'use_district') {
+                endpoint = 'village';
+                code = villageCode;
+                name = $('#villageSelect option:selected').text();
+            }
+            if (cityCode === 'use_province') {
                 endpoint = 'province';
                 code = provinceCode;
                 name = $('#provinceSelect option:selected').text();
@@ -1013,8 +1111,10 @@
                 const geojsonOriginal = response.data;
 
                 // 2) Balik lat-lon pada geometry
-                const geojson = swapGeoJSON(geojsonOriginal);
-
+                if (endpoint != 'village')
+                    geojson = swapGeoJSON(geojsonOriginal);
+                else
+                    geojson = geojsonOriginal
                 // 3) Render di Leaflet
                 drawnItems.clearLayers();
 
