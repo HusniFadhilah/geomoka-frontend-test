@@ -274,8 +274,70 @@
                         <select class="form-select" id="analysisType">
                             <option value="vegetation">Vegetation Indices</option>
                             <option value="landcover">Land Cover</option>
+                            <option value="carbon">Carbon Stock Estimation</option>
                             <option value="combined">Combined Analysis</option>
                         </select>
+                    </div>
+
+                    <!-- Tambahkan Carbon Parameters section -->
+                    <div id="carbonParams" style="display: none;">
+                        <h6 class="mb-3"><i class="fas fa-tree"></i> Carbon Analysis Parameters</h6>
+
+                        <div class="alert alert-info">
+                            <small>
+                                <i class="fas fa-info-circle"></i>
+                                This analysis estimates aboveground carbon stock using Sentinel-2 imagery
+                                and WCMC biomass reference data with robust linear regression.
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Month Range</label>
+                            <div class="d-flex gap-2">
+                                <select class="form-select" id="carbonStartMonth">
+                                    <option value="1" selected>Jan</option>
+                                    <option value="2">Feb</option>
+                                    <option value="3">Mar</option>
+                                    <option value="4">Apr</option>
+                                    <option value="5">May</option>
+                                    <option value="6">Jun</option>
+                                    <option value="7">Jul</option>
+                                    <option value="8">Aug</option>
+                                    <option value="9">Sep</option>
+                                    <option value="10">Oct</option>
+                                    <option value="11">Nov</option>
+                                    <option value="12">Dec</option>
+                                </select>
+                                <span class="align-self-center">to</span>
+                                <select class="form-select" id="carbonEndMonth">
+                                    <option value="1">Jan</option>
+                                    <option value="2">Feb</option>
+                                    <option value="3">Mar</option>
+                                    <option value="4">Apr</option>
+                                    <option value="5">May</option>
+                                    <option value="6">Jun</option>
+                                    <option value="7">Jul</option>
+                                    <option value="8">Aug</option>
+                                    <option value="9">Sep</option>
+                                    <option value="10">Oct</option>
+                                    <option value="11">Nov</option>
+                                    <option value="12" selected>Dec</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Cloud Threshold (%)</label>
+                            <input type="range" class="form-range" id="carbonCloudSlider" min="0" max="30" value="10">
+                            <div class="text-center"><strong id="carbonCloudValue">10</strong>%</div>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="showReference" checked>
+                            <label class="form-check-label" for="showReference">
+                                Show Reference Carbon Data
+                            </label>
+                        </div>
                     </div>
 
                     <!-- Year -->
@@ -582,6 +644,49 @@
                                         </div>
                                     </div>
                                 </div>
+                                <!-- Carbon Stats (add after landcoverStats) -->
+                                <div id="carbonStats" class="mt-4" style="display:none;">
+                                    <h5 class="mb-3"><i class="fas fa-tree"></i> Carbon Stock Analysis</h5>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">Carbon Density Statistics</h6>
+                                                    <table class="table table-sm">
+                                                        <tbody id="carbonDensityTable">
+                                                            <!-- Will be populated by JS -->
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">Total Carbon Stock</h6>
+                                                    <table class="table table-sm">
+                                                        <tbody id="carbonTotalTable">
+                                                            <!-- Will be populated by JS -->
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mt-3">
+                                        <div class="col-md-12">
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">Model Performance</h6>
+                                                    <div id="carbonModelInfo"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -629,7 +734,7 @@
         // ==========================================
         const API_BASE_URL = 'https://backend.geomoka.husnifd.my.id/api';  // Change this to your backend URL
         // const API_BASE_URL = 'http://154.12.231.185:8086/api';  // Change this to your backend URL
-        // const API_BASE_URL = 'http://localhost:5000/api';  // Change this to your backend URL
+        //const API_BASE_URL = 'http://localhost:5000/api';  // Change this to your backend URL
 
         // Global variables
         let map, resultMap;
@@ -642,6 +747,9 @@
         let legendControl = null;
         let provinceSelect, citySelect, districtSelect, villageSelect
         charts.landcoverPie = null;
+        let processStartTime = null;
+        let processTimers = {};
+        let timerInterval = null;
 
         const ESA_WORLDCOVER_LEGEND = {
             "Trees": "#006400",
@@ -656,6 +764,40 @@
             "Mangroves": "#00cf75",
             "Moss and lichen": "#fae6a0"
         };
+
+        // Tambahkan di bagian global variables
+        let carbonResults = null;
+
+        // Fungsi baru untuk carbon analysis
+        async function runCarbonAnalysis() {
+            const params = {
+                aoi: currentAOI.geojson ? { geojson: currentAOI.geojson } : {
+                    west: currentAOI.geometry.getWest(),
+                    south: currentAOI.geometry.getSouth(),
+                    east: currentAOI.geometry.getEast(),
+                    north: currentAOI.geometry.getNorth()
+                },
+                year: parseInt($('#yearValue').text()),
+                start_month: parseInt($('#carbonStartMonth').val()),
+                end_month: parseInt($('#carbonEndMonth').val()),
+                cloud_threshold: parseInt($('#carbonCloudValue').text())
+            };
+
+            console.log('Carbon analysis params:', params);
+
+            const response = await apiClient.analyzeCarbon(params);
+
+            if (response.success) {
+                console.log('✓ Carbon analysis complete:', response.data);
+                return response.data;
+            } else {
+                showAlert('Carbon analysis failed: ' + response.error, 'danger');
+                return null;
+            }
+        }
+
+        // Tambahkan section baru untuk carbon stats di HTML
+        // Letakkan setelah #landcoverStats
 
         // ==========================================
         // API CLIENT
@@ -722,6 +864,14 @@
 
             async analyzeLandCover(params) {
                 return await this.request('/analyze/landcover', {
+                    method: 'POST',
+                    data: params
+                });
+            }
+
+            // ✅ TAMBAHKAN METHOD INI (YANG HILANG!)
+            async analyzeCarbon(params) {
+                return await this.request('/analyze/carbon', {
                     method: 'POST',
                     data: params
                 });
@@ -812,6 +962,11 @@
 
             $('#cloudSlider').on('input', function () {
                 $('#cloudValue').text($(this).val());
+            });
+
+            // ✅ TAMBAHKAN INI - Event handler untuk carbon cloud slider
+            $('#carbonCloudSlider').on('input', function () {
+                $('#carbonCloudValue').text($(this).val());
             });
 
             // Analysis type change
@@ -1241,32 +1396,81 @@
 
             const analysisType = $('#analysisType').val();
             analysisResults = {};
+            processTimers = {}; // Reset timers
 
             try {
+                console.log('Starting analysis type:', analysisType);
+                const totalStartTime = Date.now();
+
                 // Run vegetation analysis
                 if (analysisType === 'vegetation' || analysisType === 'combined') {
                     showLoading('Analyzing vegetation indices...', 'Processing Sentinel-2 imagery from Google Earth Engine', 20);
+                    const vegStartTime = Date.now();
+
                     const vegData = await runVegetationAnalysis();
+
+                    const vegDuration = ((Date.now() - vegStartTime) / 1000).toFixed(2);
+                    processTimers.vegetation = vegDuration;
+                    console.log(`✓ Vegetation analysis completed in ${vegDuration}s`);
+
                     if (vegData) {
                         analysisResults.vegetation = vegData;
+                        analysisResults.vegetation.processing_time = vegDuration;
                     }
                 }
 
                 // Run land cover analysis
                 if (analysisType === 'landcover' || analysisType === 'combined') {
                     showLoading('Analyzing land cover...', 'Processing land cover datasets from Google Earth Engine', 60);
+                    const lcStartTime = Date.now();
+
                     const lcData = await runLandCoverAnalysis();
+
+                    const lcDuration = ((Date.now() - lcStartTime) / 1000).toFixed(2);
+                    processTimers.landcover = lcDuration;
+                    console.log(`✓ Land cover analysis completed in ${lcDuration}s`);
+
                     if (lcData) {
                         analysisResults.landcover = lcData;
+                        analysisResults.landcover.processing_time = lcDuration;
                     }
                 }
 
+                // Run carbon analysis
+                if (analysisType === 'carbon' || analysisType === 'combined') {
+                    showLoading('Estimating carbon stock...', 'Building regression model from Sentinel-2 and biomass data', 40);
+                    const carbonStartTime = Date.now();
+
+                    const carbonData = await runCarbonAnalysis();
+
+                    const carbonDuration = ((Date.now() - carbonStartTime) / 1000).toFixed(2);
+                    processTimers.carbon = carbonDuration;
+                    console.log(`✓ Carbon analysis completed in ${carbonDuration}s`);
+
+                    if (carbonData) {
+                        analysisResults.carbon = carbonData;
+                        analysisResults.carbon.processing_time = carbonDuration;
+                    }
+                }
+
+                const totalDuration = ((Date.now() - totalStartTime) / 1000).toFixed(2);
+                processTimers.total = totalDuration;
+
                 hideLoading();
+
+                console.log('Analysis results:', analysisResults);
+                console.log('Processing times:', processTimers);
 
                 // Display results if we have any
                 if (Object.keys(analysisResults).length > 0) {
                     displayResults();
-                    showAlert('Analysis completed successfully!', 'success');
+
+                    // Show success message with total duration
+                    showAlert(
+                        `Analysis completed successfully in ${formatDuration(totalDuration)}!`,
+                        'success',
+                        5000
+                    );
 
                     // Scroll to results
                     $('html, body').animate({
@@ -1339,6 +1543,7 @@
 
             if (response.success) {
                 console.log('✓ Land cover analysis complete:', response.data);
+                console.log(response)
                 return response.data;
             } else {
                 showAlert('Land cover analysis failed: ' + response.error, 'danger');
@@ -1349,14 +1554,64 @@
         // ==========================================
         // DISPLAY RESULTS
         // ==========================================
+        function formatDuration(seconds) {
+            const sec = parseFloat(seconds);
+            if (sec < 60) {
+                return `${sec.toFixed(1)}s`;
+            } else {
+                const mins = Math.floor(sec / 60);
+                const secs = (sec % 60).toFixed(1);
+                return `${mins}m ${secs}s`;
+            }
+        }
+
         function updateLegend(layerName) {
-            if (legendControl) { legendControl.remove(); legendControl = null; }
+            if (legendControl) {
+                legendControl.remove();
+                legendControl = null;
+            }
+
             legendControl = L.control({ position: 'bottomright' });
             legendControl.onAdd = function () {
                 const div = L.DomUtil.create('div', 'legend');
                 div.innerHTML = '<h6 style="margin-bottom:10px;font-weight:bold;">Legend</h6>';
 
-                if (layerName === 'Dynamic_World' && analysisResults.landcover?.Dynamic_World?.classes) {
+                if (layerName === 'carbon_estimated' || layerName === 'carbon_reference') {
+                    // Carbon legend with gradient
+                    const colors = ['#440154', '#414487', '#2a788e', '#22a884', '#7ad151', '#fde725'];
+                    const labels = ['0', '40', '80', '120', '160', '200+'];
+
+                    div.innerHTML += '<div style="margin-bottom:5px;"><strong>Carbon Density (Mg/ha)</strong></div>';
+
+                    for (let i = 0; i < colors.length; i++) {
+                        div.innerHTML += `
+                    <div class="legend-item">
+                        <span class="legend-color" style="background:${colors[i]}"></span>
+                        ${labels[i]}
+                    </div>
+                `;
+                    }
+
+                    if (layerName === 'carbon_estimated') {
+                        div.innerHTML += `
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i>
+                            Estimated from Sentinel-2
+                        </small>
+                    </div>
+                `;
+                    } else {
+                        div.innerHTML += `
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-database"></i>
+                            WCMC Reference Data
+                        </small>
+                    </div>
+                `;
+                    }
+                } else if (layerName === 'Dynamic_World' && analysisResults.landcover?.Dynamic_World?.classes) {
                     for (const [nm, d] of Object.entries(analysisResults.landcover.Dynamic_World.classes)) {
                         div.innerHTML += `<div class="legend-item"><span class="legend-color" style="background:${d.color}"></span>${nm}</div>`;
                     }
@@ -1367,7 +1622,6 @@
                             div.innerHTML += `<div class="legend-item"><span class="legend-color" style="background:${d.color}"></span>${nm}</div>`;
                         }
                     } else {
-                        // fallback statis
                         for (const [nm, color] of Object.entries(ESA_WORLDCOVER_LEGEND)) {
                             div.innerHTML += `<div class="legend-item"><span class="legend-color" style="background:${color}"></span>${nm}</div>`;
                         }
@@ -1375,6 +1629,7 @@
                 } else {
                     div.innerHTML += '<div class="text-muted">No legend for this layer</div>';
                 }
+
                 return div;
             };
             legendControl.addTo(resultMap);
@@ -1404,48 +1659,70 @@
             const tabsHtml = [];
             let isFirst = true;
 
+            // Vegetation tabs
             if (analysisResults.vegetation) {
-                // RGB Composite
                 if (analysisResults.vegetation.rgb_tile_url) {
                     tabsHtml.push(`
-                        <li class="nav-item">
-                            <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="rgb">
-                                <i class="fas fa-image"></i> RGB
-                            </button>
-                        </li>
-                    `);
+                <li class="nav-item">
+                    <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="rgb">
+                        <i class="fas fa-image"></i> RGB
+                    </button>
+                </li>
+            `);
                     isFirst = false;
                 }
 
-                // Indices
                 for (const index in analysisResults.vegetation.indices) {
                     tabsHtml.push(`
-                        <li class="nav-item">
-                            <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="${index}">
-                                <i class="fas fa-leaf"></i> ${index}
-                            </button>
-                        </li>
-                    `);
+                <li class="nav-item">
+                    <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="${index}">
+                        <i class="fas fa-leaf"></i> ${index}
+                    </button>
+                </li>
+            `);
                     isFirst = false;
                 }
             }
 
+            // Land cover tabs
             if (analysisResults.landcover) {
                 for (const dataset in analysisResults.landcover) {
                     tabsHtml.push(`
-                        <li class="nav-item">
-                            <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="${dataset}">
-                                <i class="fas fa-map"></i> ${dataset.replace('_', ' ')}
-                            </button>
-                        </li>
-                    `);
+                <li class="nav-item">
+                    <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="${dataset}">
+                        <i class="fas fa-map"></i> ${dataset.replace('_', ' ')}
+                    </button>
+                </li>
+            `);
                     isFirst = false;
                 }
+            }
+
+            // Carbon tabs (NEW)
+            if (analysisResults.carbon) {
+                tabsHtml.push(`
+            <li class="nav-item">
+                <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="carbon_estimated">
+                    <i class="fas fa-tree"></i> Carbon Stock
+                </button>
+            </li>
+        `);
+
+                if ($('#showReference').is(':checked') && analysisResults.carbon.carbon_reference) {
+                    tabsHtml.push(`
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-layer="carbon_reference">
+                        <i class="fas fa-database"></i> Reference Carbon
+                    </button>
+                </li>
+            `);
+                }
+
+                isFirst = false;
             }
 
             $('#resultTabs').html(tabsHtml.join(''));
 
-            // Handle tab clicks
             $('#resultTabs button').on('click', function () {
                 const layer = $(this).data('layer');
                 switchResultLayer(layer);
@@ -1480,7 +1757,6 @@
         }
 
         function switchResultLayer(layerName) {
-            // Remove existing GEE layers
             for (const key in geeTileLayers) {
                 if (geeTileLayers[key]) {
                     resultMap.removeLayer(geeTileLayers[key]);
@@ -1496,14 +1772,17 @@
                 tileUrl = analysisResults.vegetation.indices[layerName].tile_url;
             } else if (analysisResults.landcover && analysisResults.landcover[layerName]) {
                 tileUrl = analysisResults.landcover[layerName].tile_url;
+            } else if (layerName === 'carbon_estimated' && analysisResults.carbon) {
+                tileUrl = analysisResults.carbon.carbon_estimated.tile_url;
+            } else if (layerName === 'carbon_reference' && analysisResults.carbon) {
+                tileUrl = analysisResults.carbon.carbon_reference.tile_url;
             }
 
-            // Add GEE tile layer
             if (tileUrl) {
                 geeTileLayers[layerName] = L.tileLayer(tileUrl, {
                     attribution: '© Google Earth Engine',
                     className: 'gee-tile-layer',
-                    maxZoom: 18
+                    maxPixels: 18
                 }).addTo(resultMap);
 
                 console.log('✓ Loaded GEE layer:', layerName);
@@ -1543,6 +1822,174 @@
         function displayStatistics() {
             displayMetrics();
             displayStatsTable();
+            displayProcessingTimes(); // ✅ NEW
+
+            // Display carbon stats if available
+            if (analysisResults.carbon) {
+                displayCarbonStats();
+            }
+        }
+
+        function displayProcessingTimes() {
+            let timesHtml = '<div class="card mt-3"><div class="card-header"><i class="fas fa-clock"></i> Processing Times</div><div class="card-body"><div class="row">';
+
+            // Vegetation time
+            if (processTimers.vegetation) {
+                timesHtml += `
+            <div class="col-md-3">
+                <div class="text-center p-2">
+                    <i class="fas fa-leaf text-success" style="font-size: 24px;"></i>
+                    <h5 class="mt-2 mb-0">${formatDuration(processTimers.vegetation)}</h5>
+                    <small class="text-muted">Vegetation Analysis</small>
+                </div>
+            </div>
+        `;
+            }
+
+            // Land cover time
+            if (processTimers.landcover) {
+                timesHtml += `
+            <div class="col-md-3">
+                <div class="text-center p-2">
+                    <i class="fas fa-map text-info" style="font-size: 24px;"></i>
+                    <h5 class="mt-2 mb-0">${formatDuration(processTimers.landcover)}</h5>
+                    <small class="text-muted">Land Cover Analysis</small>
+                </div>
+            </div>
+        `;
+            }
+
+            // Carbon time
+            if (processTimers.carbon) {
+                timesHtml += `
+            <div class="col-md-3">
+                <div class="text-center p-2">
+                    <i class="fas fa-tree text-success" style="font-size: 24px;"></i>
+                    <h5 class="mt-2 mb-0">${formatDuration(processTimers.carbon)}</h5>
+                    <small class="text-muted">Carbon Analysis</small>
+                </div>
+            </div>
+        `;
+            }
+
+            // Total time
+            if (processTimers.total) {
+                timesHtml += `
+            <div class="col-md-3">
+                <div class="text-center p-2">
+                    <i class="fas fa-stopwatch text-primary" style="font-size: 24px;"></i>
+                    <h5 class="mt-2 mb-0">${formatDuration(processTimers.total)}</h5>
+                    <small class="text-muted">Total Time</small>
+                </div>
+            </div>
+        `;
+            }
+
+            timesHtml += '</div></div></div>';
+
+            // Insert before stats table or after metrics
+            if ($('#processingTimes').length) {
+                $('#processingTimes').replaceWith(timesHtml);
+            } else {
+                $(timesHtml).attr('id', 'processingTimes').insertAfter('#metricsContainer');
+            }
+        }
+
+        function displayCarbonStats() {
+            const carbonData = analysisResults.carbon;
+            const stats = carbonData.carbon_estimated.statistics;
+            const areaInfo = carbonData.area_info;
+            const modelInfo = carbonData.model_info;
+            const modelPerf = carbonData.model_performance;
+            const processingTime = carbonData.processing_time || 'N/A';
+
+            // Carbon Density Table
+            const densityHtml = `
+        <tr>
+            <td><strong>Mean:</strong></td>
+            <td>${stats.mean.toFixed(2)} Mg/ha</td>
+        </tr>
+        <tr>
+            <td><strong>Std Dev:</strong></td>
+            <td>${stats.std_dev.toFixed(2)} Mg/ha</td>
+        </tr>
+        <tr>
+            <td><strong>Min:</strong></td>
+            <td>${stats.min.toFixed(2)} Mg/ha</td>
+        </tr>
+        <tr>
+            <td><strong>Max:</strong></td>
+            <td>${stats.max.toFixed(2)} Mg/ha</td>
+        </tr>
+    `;
+            $('#carbonDensityTable').html(densityHtml);
+
+            // Total Carbon Table
+            const totalHtml = `
+        <tr>
+            <td><strong>Area:</strong></td>
+            <td>${areaInfo.area_ha.toLocaleString()} hectares</td>
+        </tr>
+        <tr>
+            <td><strong>Total Carbon:</strong></td>
+            <td>${areaInfo.total_carbon_tons.toLocaleString()} tons</td>
+        </tr>
+        <tr>
+            <td><strong>CO₂ Equivalent:</strong></td>
+            <td>${areaInfo.carbon_dioxide_equivalent_tons.toLocaleString()} tons CO₂e</td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i>
+                    CO₂ equivalent calculated using conversion factor of 3.67
+                </small>
+            </td>
+        </tr>
+    `;
+            $('#carbonTotalTable').html(totalHtml);
+
+            // Model Info (dengan processing time)
+            const modelHtml = `
+        <div class="row">
+            <div class="col-md-2">
+                <strong>Method:</strong><br>
+                ${modelInfo.method}
+            </div>
+            <div class="col-md-2">
+                <strong>Predictors:</strong><br>
+                ${modelInfo.predictors} bands
+            </div>
+            <div class="col-md-2">
+                <strong>RMSE:</strong><br>
+                <span class="badge ${modelPerf.rmse < 20 ? 'bg-success' : modelPerf.rmse < 40 ? 'bg-warning' : 'bg-danger'}">
+                    ${modelPerf.rmse.toFixed(2)} Mg/ha
+                </span>
+            </div>
+            <div class="col-md-2">
+                <strong>Tree Mask:</strong><br>
+                ${modelInfo.tree_mask ? '<i class="fas fa-check text-success"></i> Applied' : '<i class="fas fa-times text-danger"></i> Not Applied'}
+            </div>
+            <div class="col-md-2">
+                <strong>Scale:</strong><br>
+                ${modelInfo.scale}m
+            </div>
+            <div class="col-md-2">
+                <strong>Processing Time:</strong><br>
+                <span class="badge bg-info">
+                    <i class="fas fa-clock"></i> ${formatDuration(processingTime)}
+                </span>
+            </div>
+        </div>
+        <div class="mt-2">
+            <small class="text-muted">
+                ${modelPerf.description}
+            </small>
+        </div>
+    `;
+            $('#carbonModelInfo').html(modelHtml);
+
+            $('#carbonStats').show();
         }
 
         function displayMetrics() {
@@ -1557,31 +2004,31 @@
                 const avgMean = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
 
                 html += `
-                <div class="col-md-3">
-                    <div class="metric-card">
-                    <div class="metric-icon"><i class="fa-solid fa-images"></i></div>
-                    <div class="metric-value">${imagesFound}</div>
-                    <div class="metric-label">Images Found</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="metric-card">
-                    <div class="metric-icon"><i class="fa-solid fa-seedling"></i></div>
-                    <div class="metric-value">${idxCount}</div>
-                    <div class="metric-label">Indices Analyzed</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="metric-card">
-                    <div class="metric-icon"><i class="fa-solid fa-chart-line"></i></div>
-                    <div class="metric-value">${avgMean.toFixed(3)}</div>
-                    <div class="metric-label">Avg Mean Value</div>
-                    </div>
-                </div>
-                `;
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fa-solid fa-images"></i></div>
+                <div class="metric-value">${imagesFound}</div>
+                <div class="metric-label">Images Found</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fa-solid fa-seedling"></i></div>
+                <div class="metric-value">${idxCount}</div>
+                <div class="metric-label">Indices Analyzed</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fa-solid fa-chart-line"></i></div>
+                <div class="metric-value">${avgMean.toFixed(3)}</div>
+                <div class="metric-label">Avg Mean Value</div>
+            </div>
+        </div>
+        `;
             }
 
-            // Land cover metrics (ambil DW dulu, jika tidak ada pakai ESA)
+            // Land cover metrics
             let lcClasses = null;
             if (analysisResults.landcover?.Dynamic_World?.classes) {
                 lcClasses = analysisResults.landcover.Dynamic_World.classes;
@@ -1593,15 +2040,57 @@
                 const totalHa = Object.values(lcClasses)
                     .reduce((s, c) => s + Number(c.area || 0), 0);
                 html += `
-                <div class="col-md-3">
-                    <div class="metric-card">
-                    <div class="metric-icon"><i class="fa-solid fa-earth-asia"></i></div>
-                    <div class="metric-value">${totalHa.toLocaleString(undefined, { maximumFractionDigits: 1 })}
-                        <small>ha</small></div>
-                    <div class="metric-label">Total Area</div>
-                    </div>
-                </div>
-                `;
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fa-solid fa-earth-asia"></i></div>
+                <div class="metric-value">${totalHa.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                    <small>ha</small></div>
+                <div class="metric-label">Total Area</div>
+            </div>
+        </div>
+        `;
+            }
+
+            // Carbon metrics (NEW)
+            if (analysisResults.carbon) {
+                const carbonData = analysisResults.carbon;
+                const stats = carbonData.carbon_estimated.statistics;
+                const areaInfo = carbonData.area_info;
+                const modelPerf = carbonData.model_performance;
+
+                html += `
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fa-solid fa-tree"></i></div>
+                <div class="metric-value">${stats.mean.toLocaleString()}
+                    <small>Mg/ha</small></div>
+                <div class="metric-label">Avg Carbon Density</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fa-solid fa-weight-hanging"></i></div>
+                <div class="metric-value">${areaInfo.total_carbon_tons.toLocaleString()}
+                    <small>tons</small></div>
+                <div class="metric-label">Total Carbon Stock</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fa-solid fa-cloud"></i></div>
+                <div class="metric-value">${areaInfo.carbon_dioxide_equivalent_tons.toLocaleString()}
+                    <small>tons</small></div>
+                <div class="metric-label">CO₂ Equivalent</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-icon"><i class="fa-solid fa-chart-simple"></i></div>
+                <div class="metric-value">${modelPerf.rmse.toFixed(2)}</div>
+                <div class="metric-label">Model RMSE</div>
+            </div>
+        </div>
+        `;
             }
 
             $('#metricsContainer').html(html);
@@ -1870,6 +2359,7 @@
                     cloud_threshold: $('#cloudValue').text(),
                     selected_indices: selectedIndices
                 },
+                processing_times: processTimers, // ✅ Include processing times
                 results: analysisResults
             };
 
@@ -1892,9 +2382,36 @@
             report += `**Area:** ${currentAOI.area} km²\n`;
             report += `**Year:** ${$('#yearValue').text()}\n\n`;
 
+            // ✅ Add processing times section
+            if (Object.keys(processTimers).length > 0) {
+                report += `## Processing Performance\n\n`;
+
+                if (processTimers.vegetation) {
+                    report += `- **Vegetation Analysis:** ${formatDuration(processTimers.vegetation)}\n`;
+                }
+                if (processTimers.landcover) {
+                    report += `- **Land Cover Analysis:** ${formatDuration(processTimers.landcover)}\n`;
+                }
+                if (processTimers.carbon) {
+                    report += `- **Carbon Analysis:** ${formatDuration(processTimers.carbon)}\n`;
+                }
+                if (processTimers.total) {
+                    report += `- **Total Time:** ${formatDuration(processTimers.total)}\n`;
+                }
+
+                report += `\n`;
+            }
+
+            // Vegetation section
             if (analysisResults.vegetation) {
                 report += `## Vegetation Indices\n\n`;
-                report += `**Images Found:** ${analysisResults.vegetation.collection_size}\n\n`;
+                report += `**Images Found:** ${analysisResults.vegetation.collection_size}\n`;
+
+                if (analysisResults.vegetation.processing_time) {
+                    report += `**Processing Time:** ${formatDuration(analysisResults.vegetation.processing_time)}\n`;
+                }
+
+                report += `\n`;
 
                 for (const [index, stats] of Object.entries(analysisResults.vegetation.indices)) {
                     report += `### ${index}\n`;
@@ -1905,11 +2422,47 @@
                 }
             }
 
+            // Land cover section
             if (analysisResults.landcover && analysisResults.landcover.Dynamic_World) {
                 report += `## Land Cover Distribution\n\n`;
+
+                if (analysisResults.landcover.processing_time) {
+                    report += `**Processing Time:** ${formatDuration(analysisResults.landcover.processing_time)}\n\n`;
+                }
+
                 for (const [className, data] of Object.entries(analysisResults.landcover.Dynamic_World.classes)) {
                     report += `- **${className}:** ${data.area} ha (${data.percentage}%)\n`;
                 }
+                report += `\n`;
+            }
+
+            // Carbon section
+            if (analysisResults.carbon) {
+                report += `## Carbon Stock Analysis\n\n`;
+
+                const carbonData = analysisResults.carbon;
+                const stats = carbonData.carbon_estimated.statistics;
+                const areaInfo = carbonData.area_info;
+                const modelPerf = carbonData.model_performance;
+
+                if (carbonData.processing_time) {
+                    report += `**Processing Time:** ${formatDuration(carbonData.processing_time)}\n\n`;
+                }
+
+                report += `### Carbon Density Statistics\n`;
+                report += `- Mean: ${stats.mean.toFixed(2)} Mg/ha\n`;
+                report += `- Std Dev: ${stats.std_dev.toFixed(2)} Mg/ha\n`;
+                report += `- Min: ${stats.min.toFixed(2)} Mg/ha\n`;
+                report += `- Max: ${stats.max.toFixed(2)} Mg/ha\n\n`;
+
+                report += `### Total Carbon Stock\n`;
+                report += `- Area: ${areaInfo.area_ha.toLocaleString()} hectares\n`;
+                report += `- Total Carbon: ${areaInfo.total_carbon_tons.toLocaleString()} tons\n`;
+                report += `- CO₂ Equivalent: ${areaInfo.carbon_dioxide_equivalent_tons.toLocaleString()} tons CO₂e\n\n`;
+
+                report += `### Model Performance\n`;
+                report += `- RMSE: ${modelPerf.rmse.toFixed(2)} Mg/ha\n`;
+                report += `- ${modelPerf.description}\n\n`;
             }
 
             report += `\n---\n*Generated by GEE Analysis Platform*`;
@@ -1931,15 +2484,20 @@
         function updateParameterVisibility() {
             const analysisType = $('#analysisType').val();
 
+            $('#vegetationParams').hide();
+            $('#landcoverParams').hide();
+            $('#carbonParams').hide();
+
             if (analysisType === 'vegetation') {
                 $('#vegetationParams').show();
-                $('#landcoverParams').hide();
             } else if (analysisType === 'landcover') {
-                $('#vegetationParams').hide();
                 $('#landcoverParams').show();
-            } else {
+            } else if (analysisType === 'carbon') {
+                $('#carbonParams').show();
+            } else if (analysisType === 'combined') {
                 $('#vegetationParams').show();
                 $('#landcoverParams').show();
+                $('#carbonParams').show();
             }
         }
 
@@ -1952,13 +2510,55 @@
         }
 
         function showLoading(mainText, subText, progress = 0) {
+            // Start timer
+            processStartTime = Date.now();
+
             $('#loadingText').text(mainText);
             $('#loadingSubtext').text(subText);
             $('#loadingProgress').css('width', progress + '%');
+
+            // Add timer display
+            if ($('#loadingTimer').length === 0) {
+                $('.loading-content').append('<p class="text-primary mt-2" id="loadingTimer"><i class="fas fa-clock"></i> <span id="timerDisplay">0s</span></p>');
+            }
+
             $('#loadingOverlay').css('display', 'flex');
+
+            // Start timer update interval
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(updateLoadingTimer, 100);
+        }
+
+        function updateLoadingTimer() {
+            if (processStartTime) {
+                const elapsed = (Date.now() - processStartTime) / 1000;
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = (elapsed % 60).toFixed(1);
+
+                let timeText = '';
+                if (minutes > 0) {
+                    timeText = `${minutes}m ${seconds}s`;
+                } else {
+                    timeText = `${seconds}s`;
+                }
+
+                $('#timerDisplay').text(timeText);
+            }
         }
 
         function hideLoading() {
+            // Stop timer
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            // Calculate final duration
+            if (processStartTime) {
+                const duration = ((Date.now() - processStartTime) / 1000).toFixed(2);
+                console.log(`Process completed in ${duration}s`);
+            }
+
             $('#loadingOverlay').fadeOut();
         }
 
