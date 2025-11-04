@@ -306,21 +306,6 @@
                                     <option value="9">Sep</option>
                                     <option value="10">Oct</option>
                                     <option value="11">Nov</option>
-                                    <option value="12">Dec</option>
-                                </select>
-                                <span class="align-self-center">to</span>
-                                <select class="form-select" id="carbonEndMonth">
-                                    <option value="1">Jan</option>
-                                    <option value="2">Feb</option>
-                                    <option value="3">Mar</option>
-                                    <option value="4">Apr</option>
-                                    <option value="5">May</option>
-                                    <option value="6">Jun</option>
-                                    <option value="7">Jul</option>
-                                    <option value="8">Aug</option>
-                                    <option value="9">Sep</option>
-                                    <option value="10">Oct</option>
-                                    <option value="11">Nov</option>
                                     <option value="12" selected>Dec</option>
                                 </select>
                             </div>
@@ -330,6 +315,30 @@
                             <label class="form-label">Cloud Threshold (%)</label>
                             <input type="range" class="form-range" id="carbonCloudSlider" min="0" max="30" value="10">
                             <div class="text-center"><strong id="carbonCloudValue">10</strong>%</div>
+                        </div>
+
+                        <!-- ✅ TAMBAHKAN INI - Clip Option -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-cut"></i> Display Mode
+                            </label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="carbonClipMode" id="clipModeClipped"
+                                    value="clipped" checked>
+                                <label class="btn btn-outline-primary" for="clipModeClipped">
+                                    <i class="fas fa-cut"></i> Clipped
+                                </label>
+
+                                <input type="radio" class="btn-check" name="carbonClipMode" id="clipModeFull"
+                                    value="full">
+                                <label class="btn btn-outline-primary" for="clipModeFull">
+                                    <i class="fas fa-layer-group"></i> Full Tiles
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mt-1" id="clipModeHelp">
+                                <i class="fas fa-info-circle"></i> Clipped: Precise boundary (slower). Full Tiles:
+                                Faster processing.
+                            </small>
                         </div>
 
                         <div class="form-check mb-2">
@@ -732,9 +741,9 @@
         // ==========================================
         // CONFIGURATION
         // ==========================================
-        const API_BASE_URL = 'https://backend.geomoka.husnifd.my.id/api';  // Change this to your backend URL
+        //const API_BASE_URL = 'https://backend.geomoka.husnifd.my.id/api';  // Change this to your backend URL
         // const API_BASE_URL = 'http://154.12.231.185:8086/api';  // Change this to your backend URL
-        //const API_BASE_URL = 'http://localhost:5000/api';  // Change this to your backend URL
+        const API_BASE_URL = 'http://localhost:5000/api';  // Change this to your backend URL
 
         // Global variables
         let map, resultMap;
@@ -770,6 +779,8 @@
 
         // Fungsi baru untuk carbon analysis
         async function runCarbonAnalysis() {
+            const clipMode = $('input[name="carbonClipMode"]:checked').val(); // ✅ Get clip mode
+
             const params = {
                 aoi: currentAOI.geojson ? { geojson: currentAOI.geojson } : {
                     west: currentAOI.geometry.getWest(),
@@ -780,7 +791,8 @@
                 year: parseInt($('#yearValue').text()),
                 start_month: parseInt($('#carbonStartMonth').val()),
                 end_month: parseInt($('#carbonEndMonth').val()),
-                cloud_threshold: parseInt($('#carbonCloudValue').text())
+                cloud_threshold: parseInt($('#carbonCloudValue').text()),
+                clip_to_aoi: clipMode === 'clipped' // ✅ Send clip preference
             };
 
             console.log('Carbon analysis params:', params);
@@ -1044,6 +1056,27 @@
             $('#generateReport').on('click', function () {
                 generateReport();
             });
+
+            $('input[name="carbonClipMode"]').on('change', function () {
+                updateClipModeHelp();
+            });
+
+            // Update help text when clip mode changes
+            function updateClipModeHelp() {
+                const mode = $('input[name="carbonClipMode"]:checked').val();
+                let helpText = '';
+
+                if (mode === 'clipped') {
+                    helpText = '<i class="fas fa-cut"></i> <strong>Clipped Mode:</strong> Carbon tiles will be precisely cut to match your AOI boundary. More accurate but slower processing.';
+                } else {
+                    helpText = '<i class="fas fa-layer-group"></i> <strong>Full Tiles Mode:</strong> Shows complete tiles without clipping. Faster processing but may extend beyond AOI.';
+                }
+
+                $('#clipModeHelp').html(helpText);
+            }
+
+            // Initialize help text
+            updateClipModeHelp();
         }
 
         // ==========================================
@@ -1592,12 +1625,20 @@
                 `;
                     }
 
+                    // Add display mode info
+                    const displayMode = analysisResults.carbon?.model_info?.display_mode;
+                    const modeIcon = displayMode === 'clipped'
+                        ? '<i class="fas fa-cut text-success"></i>'
+                        : '<i class="fas fa-layer-group text-info"></i>';
+
+                    const modeText = displayMode === 'clipped' ? 'Clipped to AOI' : 'Full Tiles';
+
                     if (layerName === 'carbon_estimated') {
                         div.innerHTML += `
                     <div class="mt-2">
                         <small class="text-muted">
-                            <i class="fas fa-info-circle"></i>
-                            Estimated from Sentinel-2
+                            <i class="fas fa-satellite"></i> Sentinel-2 Model<br>
+                            ${modeIcon} ${modeText}
                         </small>
                     </div>
                 `;
@@ -1605,8 +1646,8 @@
                         div.innerHTML += `
                     <div class="mt-2">
                         <small class="text-muted">
-                            <i class="fas fa-database"></i>
-                            WCMC Reference Data
+                            <i class="fas fa-database"></i> WCMC Reference<br>
+                            ${modeIcon} ${modeText}
                         </small>
                     </div>
                 `;
@@ -1903,6 +1944,33 @@
             const modelPerf = carbonData.model_performance;
             const processingTime = carbonData.processing_time || 'N/A';
 
+            // Display mode info banner
+            let modeBanner = '';
+            if (modelInfo.display_mode === 'clipped') {
+                modeBanner = `
+            <div class="alert alert-success mb-3">
+                <i class="fas fa-cut"></i> 
+                <strong>Clipped Mode:</strong> Carbon tiles are precisely cut to match your AOI boundary. 
+                Statistics are calculated only for pixels within the boundary.
+            </div>
+        `;
+            } else {
+                modeBanner = `
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-layer-group"></i> 
+                <strong>Full Tiles Mode:</strong> Displaying complete tiles without clipping. 
+                Tiles may extend beyond your AOI boundary, but statistics are still calculated for the AOI only.
+            </div>
+        `;
+            }
+
+            // Update or create mode banner
+            if ($('#carbonModeInfo').length === 0) {
+                $('#carbonStats').prepend(`<div id="carbonModeInfo">${modeBanner}</div>`);
+            } else {
+                $('#carbonModeInfo').html(modeBanner);
+            }
+
             // Carbon Density Table
             const densityHtml = `
         <tr>
@@ -1949,7 +2017,11 @@
     `;
             $('#carbonTotalTable').html(totalHtml);
 
-            // Model Info (dengan processing time)
+            // Model Info with display mode badge
+            const modeBadge = modelInfo.display_mode === 'clipped'
+                ? '<span class="badge bg-success"><i class="fas fa-cut"></i> Clipped</span>'
+                : '<span class="badge bg-info"><i class="fas fa-layer-group"></i> Full Tiles</span>';
+
             const modelHtml = `
         <div class="row">
             <div class="col-md-2">
@@ -1961,30 +2033,40 @@
                 ${modelInfo.predictors} bands
             </div>
             <div class="col-md-2">
+                <strong>Images Used:</strong><br>
+                <span class="badge bg-primary">${modelInfo.images_used || 'N/A'}</span>
+            </div>
+            <div class="col-md-2">
                 <strong>RMSE:</strong><br>
                 <span class="badge ${modelPerf.rmse < 20 ? 'bg-success' : modelPerf.rmse < 40 ? 'bg-warning' : 'bg-danger'}">
                     ${modelPerf.rmse.toFixed(2)} Mg/ha
                 </span>
             </div>
             <div class="col-md-2">
+                <strong>Display Mode:</strong><br>
+                ${modeBadge}
+            </div>
+            <div class="col-md-2">
                 <strong>Tree Mask:</strong><br>
                 ${modelInfo.tree_mask ? '<i class="fas fa-check text-success"></i> Applied' : '<i class="fas fa-times text-danger"></i> Not Applied'}
             </div>
-            <div class="col-md-2">
+        </div>
+        <div class="row mt-2">
+            <div class="col-md-3">
                 <strong>Scale:</strong><br>
-                ${modelInfo.scale}m
+                ${modelInfo.scale}m resolution
             </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
                 <strong>Processing Time:</strong><br>
                 <span class="badge bg-info">
                     <i class="fas fa-clock"></i> ${formatDuration(processingTime)}
                 </span>
             </div>
-        </div>
-        <div class="mt-2">
-            <small class="text-muted">
-                ${modelPerf.description}
-            </small>
+            <div class="col-md-6">
+                <small class="text-muted">
+                    ${modelPerf.description}
+                </small>
+            </div>
         </div>
     `;
             $('#carbonModelInfo').html(modelHtml);
