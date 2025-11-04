@@ -291,22 +291,38 @@
                             </small>
                         </div>
 
+                        <!-- ✅ FIX: Month Range dengan label yang jelas -->
                         <div class="mb-3">
                             <label class="form-label">Month Range</label>
-                            <div class="d-flex gap-2">
+                            <div class="d-flex gap-2 align-items-center">
                                 <select class="form-select" id="carbonStartMonth">
-                                    <option value="1" selected>Jan</option>
-                                    <option value="2">Feb</option>
-                                    <option value="3">Mar</option>
-                                    <option value="4">Apr</option>
+                                    <option value="1" selected>January</option>
+                                    <option value="2">February</option>
+                                    <option value="3">March</option>
+                                    <option value="4">April</option>
                                     <option value="5">May</option>
-                                    <option value="6">Jun</option>
-                                    <option value="7">Jul</option>
-                                    <option value="8">Aug</option>
-                                    <option value="9">Sep</option>
-                                    <option value="10">Oct</option>
-                                    <option value="11">Nov</option>
-                                    <option value="12" selected>Dec</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                </select>
+                                <span class="text-muted">to</span>
+                                <select class="form-select" id="carbonEndMonth">
+                                    <option value="1">January</option>
+                                    <option value="2">February</option>
+                                    <option value="3">March</option>
+                                    <option value="4">April</option>
+                                    <option value="5">May</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12" selected>December</option>
                                 </select>
                             </div>
                         </div>
@@ -317,7 +333,7 @@
                             <div class="text-center"><strong id="carbonCloudValue">10</strong>%</div>
                         </div>
 
-                        <!-- ✅ TAMBAHKAN INI - Clip Option -->
+                        <!-- Display Mode -->
                         <div class="mb-3">
                             <label class="form-label">
                                 <i class="fas fa-cut"></i> Display Mode
@@ -777,9 +793,56 @@
         // Tambahkan di bagian global variables
         let carbonResults = null;
 
+        function validateCarbonParams() {
+            const year = parseInt($('#yearValue').text());
+            const startMonth = parseInt($('#carbonStartMonth').val());
+            const endMonth = parseInt($('#carbonEndMonth').val());
+            const cloudThreshold = parseInt($('#carbonCloudValue').text());
+
+            const errors = [];
+
+            if (!year || isNaN(year)) {
+                errors.push('Year is not set');
+            }
+
+            if (!startMonth || isNaN(startMonth)) {
+                errors.push('Start month is not selected');
+            }
+
+            if (!endMonth || isNaN(endMonth)) {
+                errors.push('End month is not selected');
+            }
+
+            if (startMonth > endMonth) {
+                errors.push('Start month cannot be after end month');
+            }
+
+            if (!cloudThreshold || isNaN(cloudThreshold)) {
+                errors.push('Cloud threshold is not set');
+            }
+
+            return {
+                valid: errors.length === 0,
+                errors: errors,
+                params: { year, startMonth, endMonth, cloudThreshold }
+            };
+        }
+
         // Fungsi baru untuk carbon analysis
         async function runCarbonAnalysis() {
-            const clipMode = $('input[name="carbonClipMode"]:checked').val(); // ✅ Get clip mode
+            // ✅ Pre-flight validation
+            const validation = validateCarbonParams();
+
+            if (!validation.valid) {
+                const errorMsg = 'Invalid carbon analysis parameters:\n' + validation.errors.join('\n');
+                showAlert(errorMsg, 'danger');
+                console.error('Validation failed:', validation);
+                return null;
+            }
+
+            console.log('✓ Parameters validated:', validation.params);
+
+            const clipMode = $('input[name="carbonClipMode"]:checked').val();
 
             const params = {
                 aoi: currentAOI.geojson ? { geojson: currentAOI.geojson } : {
@@ -788,11 +851,11 @@
                     east: currentAOI.geometry.getEast(),
                     north: currentAOI.geometry.getNorth()
                 },
-                year: parseInt($('#yearValue').text()),
-                start_month: parseInt($('#carbonStartMonth').val()),
-                end_month: parseInt($('#carbonEndMonth').val()),
-                cloud_threshold: parseInt($('#carbonCloudValue').text()),
-                clip_to_aoi: clipMode === 'clipped' // ✅ Send clip preference
+                year: validation.params.year,
+                start_month: validation.params.startMonth,
+                end_month: validation.params.endMonth,
+                cloud_threshold: validation.params.cloudThreshold,
+                clip_to_aoi: clipMode === 'clipped'
             };
 
             console.log('Carbon analysis params:', params);
@@ -976,7 +1039,12 @@
                 $('#cloudValue').text($(this).val());
             });
 
-            // ✅ TAMBAHKAN INI - Event handler untuk carbon cloud slider
+            $('#carbonStartMonth, #carbonEndMonth').on('change', function () {
+                const startMonth = $('#carbonStartMonth').val();
+                const endMonth = $('#carbonEndMonth').val();
+                console.log('Carbon months changed:', { startMonth, endMonth });
+            });
+
             $('#carbonCloudSlider').on('input', function () {
                 $('#carbonCloudValue').text($(this).val());
             });
