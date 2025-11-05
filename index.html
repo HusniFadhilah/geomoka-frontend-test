@@ -864,10 +864,36 @@
 
             if (response.success) {
                 console.log('✓ Carbon analysis complete:', response.data);
+
+                // ✅ Validate response structure
+                if (!response.data.carbon_estimated || !response.data.area_info) {
+                    console.error('Invalid response structure:', response.data);
+                    showAlert('Error: Invalid response from server. Missing required fields.', 'danger');
+                    return null;
+                }
+
                 return response.data;
             } else {
                 showAlert('Carbon analysis failed: ' + response.error, 'danger');
                 return null;
+            }
+        }
+
+        // Run this in browser console to inspect data
+        function debugCarbonData() {
+            console.log('=== Carbon Analysis Debug ===');
+            console.log('Full results:', analysisResults);
+            console.log('Carbon data:', analysisResults.carbon);
+            console.log('Area info:', analysisResults.carbon?.area_info);
+            console.log('Statistics:', analysisResults.carbon?.carbon_estimated?.statistics);
+            console.log('Model info:', analysisResults.carbon?.model_info);
+
+            // Check for undefined properties
+            const carbonData = analysisResults.carbon;
+            if (carbonData) {
+                console.log('Has area_info.calculation_area_ha?', carbonData.area_info?.calculation_area_ha !== undefined);
+                console.log('Has area_info.area_ha?', carbonData.area_info?.area_ha !== undefined);
+                console.log('Has area_info.total_carbon_tons?', carbonData.area_info?.total_carbon_tons !== undefined);
             }
         }
 
@@ -1745,23 +1771,36 @@
         }
 
         function displayResults() {
-            $('#resultsSection').slideDown();
+            try {
+                $('#resultsSection').slideDown();
 
-            createResultTabs();
-            initializeResultMap();
-            displayStatistics();
-            $('#vegCharts').toggle(!!(analysisResults.vegetation && analysisResults.vegetation.indices));
-            createCharts();
+                createResultTabs();
+                initializeResultMap();
 
-            if (analysisResults.landcover?.Dynamic_World?.classes) {
-                renderLandCoverTableAndChart('Dynamic_World', 'Dynamic World');
-            } else if (analysisResults.landcover?.ESA_WorldCover?.classes) {
-                renderLandCoverTableAndChart('ESA_WorldCover', 'ESA WorldCover');
-            } else {
-                $('#landcoverStats').hide();
+                // ✅ Wrap statistics display in try-catch
+                try {
+                    displayStatistics();
+                } catch (error) {
+                    console.error('Error displaying statistics:', error);
+                    showAlert('Warning: Some statistics could not be displayed. Check console for details.', 'warning');
+                }
+
+                $('#vegCharts').toggle(!!(analysisResults.vegetation && analysisResults.vegetation.indices));
+                createCharts();
+
+                if (analysisResults.landcover?.Dynamic_World?.classes) {
+                    renderLandCoverTableAndChart('Dynamic_World', 'Dynamic World');
+                } else if (analysisResults.landcover?.ESA_WorldCover?.classes) {
+                    renderLandCoverTableAndChart('ESA_WorldCover', 'ESA WorldCover');
+                } else {
+                    $('#landcoverStats').hide();
+                }
+
+                console.log('✓ Results displayed');
+            } catch (error) {
+                console.error('Error in displayResults:', error);
+                showAlert('Error displaying results: ' + error.message, 'danger');
             }
-
-            console.log('✓ Results displayed');
         }
 
         function createResultTabs() {
@@ -1929,13 +1968,28 @@
         }
 
         function displayStatistics() {
-            displayMetrics();
-            displayStatsTable();
-            displayProcessingTimes(); // ✅ NEW
+            try {
+                displayMetrics();
+                displayStatsTable();
 
-            // Display carbon stats if available
-            if (analysisResults.carbon) {
-                displayCarbonStats();
+                // ✅ Display carbon stats with error handling
+                if (analysisResults.carbon) {
+                    try {
+                        displayCarbonStats();
+                    } catch (error) {
+                        console.error('Error displaying carbon stats:', error);
+                        $('#carbonStats').html(`
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Error displaying carbon statistics: ${error.message}
+                        <br><small>Check console for details</small>
+                    </div>
+                `).show();
+                    }
+                }
+            } catch (error) {
+                console.error('Error in displayStatistics:', error);
+                throw error;
             }
         }
 
@@ -2006,28 +2060,63 @@
 
         function displayCarbonStats() {
             const carbonData = analysisResults.carbon;
+
+            // ✅ Add safety checks
+            if (!carbonData || !carbonData.carbon_estimated || !carbonData.area_info) {
+                console.error('Invalid carbon data structure:', carbonData);
+                showAlert('Error displaying carbon statistics: Invalid data structure', 'danger');
+                return;
+            }
+
             const stats = carbonData.carbon_estimated.statistics;
             const areaInfo = carbonData.area_info;
             const modelInfo = carbonData.model_info;
             const modelPerf = carbonData.model_performance;
             const processingTime = carbonData.processing_time || 'N/A';
 
+            // ✅ Safety checks for nested properties
+            if (!stats || !areaInfo || !modelInfo || !modelPerf) {
+                console.error('Missing carbon data properties');
+                showAlert('Error: Incomplete carbon analysis data', 'danger');
+                return;
+            }
+
             // Display mode info banner
             let modeBanner = '';
-            if (modelInfo.display_mode === 'clipped') {
+            const calculationMode = modelInfo.calculation_mode || 'unknown';
+            const calculationAreaHa = areaInfo.calculation_area_ha || areaInfo.area_ha || 0;
+            const filteringAreaHa = areaInfo.filtering_area_ha || calculationAreaHa;
+
+            if (calculationMode === 'clipped_aoi') {
                 modeBanner = `
             <div class="alert alert-success mb-3">
                 <i class="fas fa-cut"></i> 
-                <strong>Clipped Mode:</strong> Carbon tiles are precisely cut to match your AOI boundary. 
-                Statistics are calculated only for pixels within the boundary.
+                <strong>Clipped Mode:</strong> Both visualization and statistics are calculated for the precise AOI boundary only.
+                <br><small>
+                    <i class="fas fa-info-circle"></i> 
+                    Area: ${calculationAreaHa.toLocaleString()} ha
+                    ${areaInfo.description ? ' - ' + areaInfo.description : ''}
+                </small>
+            </div>
+        `;
+            } else if (calculationMode === 'full_tiles') {
+                modeBanner = `
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-layer-group"></i> 
+                <strong>Full Tiles Mode:</strong> Imagery filtered using AOI (${filteringAreaHa.toLocaleString()} ha), 
+                but statistics calculated for bounding box area (${calculationAreaHa.toLocaleString()} ha).
+                <br><small class="text-muted">
+                    <i class="fas fa-info-circle"></i> 
+                    ${areaInfo.description || 'Statistics cover larger area than visual boundary'}
+                </small>
             </div>
         `;
             } else {
                 modeBanner = `
-            <div class="alert alert-info mb-3">
-                <i class="fas fa-layer-group"></i> 
-                <strong>Full Tiles Mode:</strong> Displaying complete tiles without clipping. 
-                Tiles may extend beyond your AOI boundary, but statistics are still calculated for the AOI only.
+            <div class="alert alert-warning mb-3">
+                <i class="fas fa-exclamation-triangle"></i> 
+                <strong>Analysis Mode:</strong> ${calculationMode}
+                <br><small>Area: ${calculationAreaHa.toLocaleString()} ha</small>
             </div>
         `;
             }
@@ -2043,86 +2132,112 @@
             const densityHtml = `
         <tr>
             <td><strong>Mean:</strong></td>
-            <td>${stats.mean.toFixed(2)} Mg/ha</td>
+            <td>${(stats.mean || 0).toFixed(2)} Mg/ha</td>
         </tr>
         <tr>
             <td><strong>Std Dev:</strong></td>
-            <td>${stats.std_dev.toFixed(2)} Mg/ha</td>
+            <td>${(stats.std_dev || 0).toFixed(2)} Mg/ha</td>
         </tr>
         <tr>
             <td><strong>Min:</strong></td>
-            <td>${stats.min.toFixed(2)} Mg/ha</td>
+            <td>${(stats.min || 0).toFixed(2)} Mg/ha</td>
         </tr>
         <tr>
             <td><strong>Max:</strong></td>
-            <td>${stats.max.toFixed(2)} Mg/ha</td>
+            <td>${(stats.max || 0).toFixed(2)} Mg/ha</td>
         </tr>
     `;
             $('#carbonDensityTable').html(densityHtml);
 
             // Total Carbon Table
-            const totalHtml = `
+            const totalCarbonTons = areaInfo.total_carbon_tons || 0;
+            const co2Equivalent = areaInfo.carbon_dioxide_equivalent_tons || 0;
+
+            let totalHtml = `
         <tr>
-            <td><strong>Area:</strong></td>
-            <td>${areaInfo.area_ha.toLocaleString()} hectares</td>
+            <td><strong>Calculation Area:</strong></td>
+            <td>${calculationAreaHa.toLocaleString()} ha</td>
         </tr>
         <tr>
             <td><strong>Total Carbon:</strong></td>
-            <td>${areaInfo.total_carbon_tons.toLocaleString()} tons</td>
+            <td>${totalCarbonTons.toLocaleString()} tons</td>
         </tr>
         <tr>
             <td><strong>CO₂ Equivalent:</strong></td>
-            <td>${areaInfo.carbon_dioxide_equivalent_tons.toLocaleString()} tons CO₂e</td>
+            <td>${co2Equivalent.toLocaleString()} tons CO₂e</td>
         </tr>
+    `;
+
+            // Add comparison if different filtering vs calculation area
+            if (filteringAreaHa !== calculationAreaHa && calculationMode === 'full_tiles') {
+                totalHtml += `
+        <tr class="table-info">
+            <td colspan="2">
+                <small>
+                    <i class="fas fa-filter"></i>
+                    <strong>Filtering Area:</strong> ${filteringAreaHa.toLocaleString()} ha (AOI boundary)
+                </small>
+            </td>
+        </tr>
+        `;
+            }
+
+            totalHtml += `
         <tr>
             <td colspan="2">
                 <small class="text-muted">
                     <i class="fas fa-info-circle"></i>
-                    CO₂ equivalent calculated using conversion factor of 3.67
+                    CO₂ equivalent = Carbon × 3.67
                 </small>
             </td>
         </tr>
     `;
+
             $('#carbonTotalTable').html(totalHtml);
 
-            // Model Info with display mode badge
-            const modeBadge = modelInfo.display_mode === 'clipped'
-                ? '<span class="badge bg-success"><i class="fas fa-cut"></i> Clipped</span>'
-                : '<span class="badge bg-info"><i class="fas fa-layer-group"></i> Full Tiles</span>';
+            // Model Info
+            const displayMode = modelInfo.display_mode || 'unknown';
+            const modeBadge = calculationMode === 'clipped_aoi'
+                ? '<span class="badge bg-success"><i class="fas fa-cut"></i> Clipped AOI</span>'
+                : '<span class="badge bg-info"><i class="fas fa-layer-group"></i> Bounding Box</span>';
+
+            const imagesUsed = modelInfo.images_used || 0;
+            const rmse = modelPerf.rmse || 0;
+            const treeMask = modelInfo.tree_mask;
 
             const modelHtml = `
         <div class="row">
             <div class="col-md-2">
                 <strong>Method:</strong><br>
-                ${modelInfo.method}
+                ${modelInfo.method || 'N/A'}
             </div>
             <div class="col-md-2">
                 <strong>Predictors:</strong><br>
-                ${modelInfo.predictors} bands
+                ${modelInfo.predictors || 0} bands
             </div>
             <div class="col-md-2">
                 <strong>Images Used:</strong><br>
-                <span class="badge bg-primary">${modelInfo.images_used || 'N/A'}</span>
+                <span class="badge bg-primary">${imagesUsed}</span>
             </div>
             <div class="col-md-2">
                 <strong>RMSE:</strong><br>
-                <span class="badge ${modelPerf.rmse < 20 ? 'bg-success' : modelPerf.rmse < 40 ? 'bg-warning' : 'bg-danger'}">
-                    ${modelPerf.rmse.toFixed(2)} Mg/ha
+                <span class="badge ${rmse < 20 ? 'bg-success' : rmse < 40 ? 'bg-warning' : 'bg-danger'}">
+                    ${rmse.toFixed(2)} Mg/ha
                 </span>
             </div>
             <div class="col-md-2">
-                <strong>Display Mode:</strong><br>
+                <strong>Calculation:</strong><br>
                 ${modeBadge}
             </div>
             <div class="col-md-2">
                 <strong>Tree Mask:</strong><br>
-                ${modelInfo.tree_mask ? '<i class="fas fa-check text-success"></i> Applied' : '<i class="fas fa-times text-danger"></i> Not Applied'}
+                ${treeMask ? '<i class="fas fa-check text-success"></i> Applied' : '<i class="fas fa-times text-danger"></i> Not Applied'}
             </div>
         </div>
         <div class="row mt-2">
             <div class="col-md-3">
                 <strong>Scale:</strong><br>
-                ${modelInfo.scale}m resolution
+                ${modelInfo.scale || 250}m resolution
             </div>
             <div class="col-md-3">
                 <strong>Processing Time:</strong><br>
@@ -2132,10 +2247,20 @@
             </div>
             <div class="col-md-6">
                 <small class="text-muted">
-                    ${modelPerf.description}
+                    ${modelPerf.description || 'Model performance metric'}
                 </small>
             </div>
         </div>
+        ${modelInfo.date_range ? `
+        <div class="row mt-2">
+            <div class="col-md-12">
+                <small class="text-muted">
+                    <i class="fas fa-calendar"></i>
+                    <strong>Date Range:</strong> ${modelInfo.date_range}
+                </small>
+            </div>
+        </div>
+        ` : ''}
     `;
             $('#carbonModelInfo').html(modelHtml);
 
@@ -2204,15 +2329,24 @@
             // Carbon metrics (NEW)
             if (analysisResults.carbon) {
                 const carbonData = analysisResults.carbon;
-                const stats = carbonData.carbon_estimated.statistics;
-                const areaInfo = carbonData.area_info;
-                const modelPerf = carbonData.model_performance;
+
+                // Safe access with defaults
+                const stats = carbonData.carbon_estimated?.statistics || {};
+                const areaInfo = carbonData.area_info || {};
+                const modelPerf = carbonData.model_performance || {};
+                const modelInfo = carbonData.model_info || {};
+
+                const meanCarbon = stats.mean || 0;
+                const totalCarbon = areaInfo.total_carbon_tons || 0;
+                const co2Equivalent = areaInfo.carbon_dioxide_equivalent_tons || 0;
+                const rmse = modelPerf.rmse || 0;
+                const calculationMode = modelInfo.calculation_mode || 'unknown';
 
                 html += `
         <div class="col-md-3">
             <div class="metric-card">
                 <div class="metric-icon"><i class="fa-solid fa-tree"></i></div>
-                <div class="metric-value">${stats.mean.toLocaleString()}
+                <div class="metric-value">${meanCarbon.toFixed(2)}
                     <small>Mg/ha</small></div>
                 <div class="metric-label">Avg Carbon Density</div>
             </div>
@@ -2220,15 +2354,18 @@
         <div class="col-md-3">
             <div class="metric-card">
                 <div class="metric-icon"><i class="fa-solid fa-weight-hanging"></i></div>
-                <div class="metric-value">${areaInfo.total_carbon_tons.toLocaleString()}
+                <div class="metric-value">${totalCarbon.toLocaleString()}
                     <small>tons</small></div>
                 <div class="metric-label">Total Carbon Stock</div>
+                <small class="text-muted d-block mt-1">
+                    ${calculationMode === 'clipped_aoi' ? '<i class="fas fa-cut"></i> Clipped AOI' : '<i class="fas fa-layer-group"></i> Bounding Box'}
+                </small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="metric-card">
                 <div class="metric-icon"><i class="fa-solid fa-cloud"></i></div>
-                <div class="metric-value">${areaInfo.carbon_dioxide_equivalent_tons.toLocaleString()}
+                <div class="metric-value">${co2Equivalent.toLocaleString()}
                     <small>tons</small></div>
                 <div class="metric-label">CO₂ Equivalent</div>
             </div>
@@ -2236,11 +2373,28 @@
         <div class="col-md-3">
             <div class="metric-card">
                 <div class="metric-icon"><i class="fa-solid fa-chart-simple"></i></div>
-                <div class="metric-value">${modelPerf.rmse.toFixed(2)}</div>
+                <div class="metric-value">${rmse.toFixed(2)}</div>
                 <div class="metric-label">Model RMSE</div>
             </div>
         </div>
         `;
+
+                // ✅ Add comparison metric if available
+                if (areaInfo.precise_aoi_comparison) {
+                    html += `
+            <div class="col-md-3">
+                <div class="metric-card border-warning">
+                    <div class="metric-icon"><i class="fa-solid fa-crosshairs"></i></div>
+                    <div class="metric-value">${areaInfo.precise_aoi_comparison.total_carbon_tons.toLocaleString()}
+                        <small>tons</small></div>
+                    <div class="metric-label">Precise AOI Carbon</div>
+                    <small class="text-warning d-block mt-1">
+                        <i class="fas fa-cut"></i> Actual boundary
+                    </small>
+                </div>
+            </div>
+            `;
+                }
             }
 
             $('#metricsContainer').html(html);
