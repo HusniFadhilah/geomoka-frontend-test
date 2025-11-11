@@ -2444,6 +2444,7 @@
 
             // Extract dataset info with fallback
             const datasetInfo = carbonData.model_info?.reference_dataset_info || {};
+            console.log(datasetInfo)
             const datasetName = datasetInfo.name || 'Unknown Dataset';
             const datasetResolution = datasetInfo.resolution || 'N/A';
             const datasetYear = datasetInfo.year || 'N/A';
@@ -2455,11 +2456,10 @@
                 datasetYear,
                 datasetFullName
             });
-
             const stats = carbonData.carbon_estimated.statistics;
             const areaInfo = carbonData.area_info;
             const modelInfo = carbonData.model_info;
-            const modelPerf = carbonData.model_performance;
+            const modelPerf = carbonData.model_info.cv_metrics;
             const processingTime = carbonData.processing_time || 'N/A';
 
             // Safety checks for nested properties
