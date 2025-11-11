@@ -133,6 +133,36 @@
             border-color: var(--primary-color);
         }
 
+        #modelInfoPanel .card {
+            border-left: 3px solid var(--primary-color);
+        }
+
+        #carbonModelSelect option {
+            padding: 5px;
+        }
+
+        #carbonModelSelect optgroup {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        #toggleModelInfo {
+            font-size: 0.85rem;
+        }
+
+        .badge.bg-success {
+            background-color: #28a745 !important;
+        }
+
+        .badge.bg-warning {
+            background-color: #ffc107 !important;
+            color: #000 !important;
+        }
+
+        .badge.bg-danger {
+            background-color: #dc3545 !important;
+        }
+
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -279,7 +309,7 @@
                         </select>
                     </div>
 
-                    <!-- Tambahkan Carbon Parameters section -->
+                    <!-- Carbon Parameters section - UPDATE -->
                     <div id="carbonParams" style="display: none;">
                         <h6 class="mb-3"><i class="fas fa-tree"></i> Carbon Analysis Parameters</h6>
 
@@ -287,13 +317,83 @@
                             <small>
                                 <i class="fas fa-info-circle"></i>
                                 This analysis estimates aboveground carbon stock using Sentinel-2 imagery
-                                and WCMC biomass reference data with robust linear regression.
+                                and reference biomass datasets with machine learning regression.
                             </small>
                         </div>
 
-                        <!-- ✅ FIX: Month Range dengan label yang jelas -->
+                        <!-- ✅ NEW: Reference Dataset Selector -->
                         <div class="mb-3">
-                            <label class="form-label">Month Range</label>
+                            <label class="form-label">
+                                <i class="fas fa-database"></i> Reference Dataset
+                            </label>
+                            <select class="form-select" id="carbonReferenceDataset">
+                                <option value="ESA_CCI" selected>ESA CCI Biomass (2020, 100m) - Recommended</option>
+                                <option value="WCMC">WCMC Carbon Density (2010, 300m)</option>
+                                <option value="GEDI">GEDI L4B Biomass (2019-2023, 1km)</option>
+                                <option value="Simard">Simard Forest Height (2011, 1km)</option>
+                            </select>
+                            <small class="text-muted d-block mt-1" id="datasetDescription">
+                                <i class="fas fa-info-circle"></i>
+                                High-resolution global biomass map from ESA Climate Change Initiative
+                            </small>
+                        </div>
+
+                        <!-- Model Selection (NEW) -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-brain"></i> Pre-trained Model
+                            </label>
+                            <!-- ✅ Add compatibility info -->
+                            <div class="alert alert-info alert-sm mb-2">
+                                <small>
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>GEE Compatibility:</strong> Only Linear, Ridge, and Lasso models
+                                    can be deployed directly to Google Earth Engine. Random Forest and other
+                                    tree-based models require additional processing.
+                                </small>
+                            </div>
+
+                            <select class="form-select" id="carbonModelSelect">
+                                <option value="">Loading models...</option>
+                            </select>
+                            <small class="text-muted d-block mt-1" id="modelDescription">
+                                <i class="fas fa-info-circle"></i>
+                                Select a trained model or use default
+                            </small>
+
+                            <!-- Model Info Panel (collapsible) -->
+                            <div class="collapse mt-2" id="modelInfoPanel">
+                                <div class="card card-body">
+                                    <h6 class="mb-2"><i class="fas fa-info-circle"></i> Model Details</h6>
+                                    <div id="modelInfoContent">
+                                        <div class="spinner-border spinner-border-sm" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-sm btn-outline-primary mt-2" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#modelInfoPanel" id="toggleModelInfo" style="display:none;">
+                                <i class="fas fa-info-circle"></i> View Model Info
+                            </button>
+                        </div>
+
+                        <!-- Year selector - conditional display -->
+                        <div class="mb-3" id="carbonYearSelector">
+                            <label class="form-label">Dataset Year</label>
+                            <select class="form-select" id="carbonDatasetYear">
+                                <option value="2020" selected>2020 (Latest)</option>
+                                <option value="2019">2019</option>
+                                <option value="2018">2018</option>
+                                <option value="2017">2017</option>
+                                <option value="2010">2010</option>
+                            </select>
+                        </div>
+
+                        <!-- Month Range -->
+                        <div class="mb-3">
+                            <label class="form-label">Sentinel-2 Date Range</label>
                             <div class="d-flex gap-2 align-items-center">
                                 <select class="form-select" id="carbonStartMonth">
                                     <option value="1" selected>January</option>
@@ -360,7 +460,7 @@
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" id="showReference" checked>
                             <label class="form-check-label" for="showReference">
-                                Show Reference Carbon Data
+                                Show Reference Dataset on Map
                             </label>
                         </div>
                     </div>
@@ -757,9 +857,10 @@
         // ==========================================
         // CONFIGURATION
         // ==========================================
-        const API_BASE_URL = 'https://backend.geomoka.husnifd.my.id/api';  // Change this to your backend URL
+        //const API_BASE_URL = 'https://backend.geomoka.husnifd.my.id/api';  // Change this to your backend URL
         // const API_BASE_URL = 'http://154.12.231.185:8086/api';  // Change this to your backend URL
-        //const API_BASE_URL = 'http://localhost:5000/api';  // Change this to your backend URL
+        // const API_BASE_URL = 'http://168.231.121.220:8080/api';  // Change this to your backend URL
+        const API_BASE_URL = 'http://localhost:5000/api';  // Change this to your backend URL
 
         // Global variables
         let map, resultMap;
@@ -830,7 +931,6 @@
 
         // Fungsi baru untuk carbon analysis
         async function runCarbonAnalysis() {
-            // ✅ Pre-flight validation
             const validation = validateCarbonParams();
 
             if (!validation.valid) {
@@ -843,6 +943,9 @@
             console.log('✓ Parameters validated:', validation.params);
 
             const clipMode = $('input[name="carbonClipMode"]:checked').val();
+            const referenceDataset = $('#carbonReferenceDataset').val(); // ✅ NEW
+            const datasetYear = $('#carbonDatasetYear').val(); // ✅ NEW
+            const selectedModel = $('#carbonModelSelect').val();
 
             const params = {
                 aoi: currentAOI.geojson ? { geojson: currentAOI.geojson } : {
@@ -855,7 +958,10 @@
                 start_month: validation.params.startMonth,
                 end_month: validation.params.endMonth,
                 cloud_threshold: validation.params.cloudThreshold,
-                clip_to_aoi: clipMode === 'clipped'
+                clip_to_aoi: clipMode === 'clipped',
+                reference_dataset: referenceDataset, // ✅ NEW
+                dataset_year: parseInt(datasetYear), // ✅ NEW
+                model_name: selectedModel || null
             };
 
             console.log('Carbon analysis params:', params);
@@ -865,7 +971,6 @@
             if (response.success) {
                 console.log('✓ Carbon analysis complete:', response.data);
 
-                // ✅ Validate response structure
                 if (!response.data.carbon_estimated || !response.data.area_info) {
                     console.error('Invalid response structure:', response.data);
                     showAlert('Error: Invalid response from server. Missing required fields.', 'danger');
@@ -936,6 +1041,14 @@
                 return await this.request('/health');
             }
 
+            async listModels() {
+                return await this.request('/models/list');
+            }
+
+            async getModelInfo(modelName) {
+                return await this.request(`/models/info/${modelName}`);
+            }
+
             async getProvinces() {
                 return await this.request('/regions/provinces');
             }
@@ -1004,6 +1117,8 @@
             // Load provinces
             await loadProvinces();
 
+            await loadAvailableModels();
+
             console.log('✓ Initialization complete');
         });
 
@@ -1069,6 +1184,16 @@
                 const startMonth = $('#carbonStartMonth').val();
                 const endMonth = $('#carbonEndMonth').val();
                 console.log('Carbon months changed:', { startMonth, endMonth });
+            });
+
+            // Model selection change
+            $('#carbonModelSelect').on('change', async function () {
+                const modelName = $(this).val();
+                await displayModelInfo(modelName);
+
+                if (modelName) {
+                    showAlert(`Selected model: ${modelName}`, 'info', 3000);
+                }
             });
 
             $('#carbonCloudSlider').on('input', function () {
@@ -1431,6 +1556,248 @@
                 console.log('✓ Region geometry loaded:', name);
             } else {
                 showAlert('Failed to load region geometry: ' + (response.error || 'Unknown error'), 'danger');
+            }
+        }
+
+        // ==========================================
+        // MODEL MANAGEMENT FUNCTIONS
+        // ==========================================
+        async function loadAvailableModels() {
+            try {
+                const response = await apiClient.listModels();
+
+                if (response.success && response.data.models) {
+                    const models = response.data.models;
+                    const $select = $('#carbonModelSelect');
+
+                    // ✅ Filter only GEE-compatible algorithms
+                    const geeCompatibleAlgos = ['linear', 'ridge', 'lasso', 'elasticnet'];
+                    const compatibleModels = models.filter(m =>
+                        geeCompatibleAlgos.includes(m.algorithm.toLowerCase())
+                    );
+
+                    // Clear and add default option
+                    $select.html('<option value="">-- Use Default Model --</option>');
+
+                    if (compatibleModels.length === 0) {
+                        $select.append('<option value="" disabled>-- No GEE-compatible models available --</option>');
+                        $('#modelDescription').html(
+                            `<i class="fas fa-exclamation-triangle text-warning"></i> 
+                    No GEE-compatible models found. Train a Linear, Ridge, or Lasso model first.`
+                        );
+                        console.warn('No GEE-compatible models available');
+                        return;
+                    }
+
+                    // Group by algorithm
+                    const grouped = {};
+                    compatibleModels.forEach(model => {
+                        const algo = model.algorithm || 'Other';
+                        if (!grouped[algo]) grouped[algo] = [];
+                        grouped[algo].push(model);
+                    });
+
+                    // Create optgroups
+                    for (const [algo, modelList] of Object.entries(grouped)) {
+                        const $optgroup = $('<optgroup>').attr('label', algo.toUpperCase());
+
+                        modelList
+                            .sort((a, b) => new Date(b.trained_at) - new Date(a.trained_at))
+                            .forEach(model => {
+                                const date = new Date(model.trained_at).toLocaleDateString();
+                                const r2 = model.cv_metrics?.r2_mean
+                                    ? ` (R²: ${model.cv_metrics.r2_mean.toFixed(3)})`
+                                    : '';
+
+                                $optgroup.append(
+                                    $('<option>')
+                                        .val(model.name)
+                                        .text(`${model.name} - ${date}${r2}`)
+                                        .data('model', model)
+                                );
+                            });
+
+                        $select.append($optgroup);
+                    }
+
+                    // ✅ Show warning if some models were filtered
+                    const filteredCount = models.length - compatibleModels.length;
+                    let description = `<i class="fas fa-check-circle text-success"></i> 
+                ${compatibleModels.length} GEE-compatible model(s) available`;
+
+                    if (filteredCount > 0) {
+                        description += `<br><small class="text-muted">
+                    <i class="fas fa-info-circle"></i>
+                    ${filteredCount} non-linear model(s) hidden (not GEE-compatible)
+                </small>`;
+                    }
+
+                    $('#modelDescription').html(description);
+
+                    console.log(`✓ Loaded ${compatibleModels.length} GEE-compatible models (${filteredCount} filtered)`);
+
+                } else {
+                    $('#carbonModelSelect').html('<option value="">-- No models available --</option>');
+                    $('#modelDescription').html(
+                        `<i class="fas fa-exclamation-triangle text-warning"></i> 
+                No trained models found. Using default model.`
+                    );
+                }
+            } catch (error) {
+                console.error('Error loading models:', error);
+                $('#carbonModelSelect').html('<option value="">-- Error loading models --</option>');
+                $('#modelDescription').html(
+                    `<i class="fas fa-exclamation-circle text-danger"></i> 
+            Failed to load models: ${error.message}`
+                );
+            }
+        }
+
+        async function displayModelInfo(modelName) {
+            if (!modelName) {
+                $('#toggleModelInfo').hide();
+                $('#modelInfoPanel').collapse('hide');
+                return;
+            }
+
+            $('#toggleModelInfo').show();
+            $('#modelInfoContent').html(`
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div> Loading model info...
+    `);
+
+            try {
+                const response = await apiClient.getModelInfo(modelName);
+
+                if (response.success && response.data) {
+                    const info = response.data;
+                    const geeCompatibleAlgos = ['linear', 'ridge', 'lasso', 'elasticnet'];
+                    const isGeeCompatible = geeCompatibleAlgos.includes(info.algorithm.toLowerCase());
+
+                    // Format training date
+                    const trainedDate = new Date(info.trained_at).toLocaleString();
+
+                    // ✅ Add compatibility warning
+                    let compatibilityBadge = '';
+                    if (isGeeCompatible) {
+                        compatibilityBadge = `
+                            <span class="badge bg-success">
+                                <i class="fas fa-check"></i> GEE Compatible
+                            </span>
+                        `;
+                    } else {
+                        compatibilityBadge = `
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-exclamation-triangle"></i> Requires Surrogate
+                            </span>
+                        `;
+                    }
+
+                    // Build HTML
+                    let html = `
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <td><strong>Algorithm:</strong></td>
+                        <td>${info.algorithm}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Trained:</strong></td>
+                        <td>${trainedDate}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Samples:</strong></td>
+                        <td>${info.n_samples?.toLocaleString() || 'N/A'}</td>
+                    </tr>
+            `;
+
+                    // Add warning for non-GEE models
+                    if (!isGeeCompatible) {
+                        html += `
+                    <tr>
+                        <td colspan="2">
+                            <div class="alert alert-warning mb-0 mt-2">
+                                <small>
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>Note:</strong> This model uses ${info.algorithm} which is not 
+                                    directly compatible with Google Earth Engine. A linear surrogate model 
+                                    will be created automatically, which may reduce accuracy.
+                                </small>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                    }
+
+                    // Add CV metrics if available
+                    if (info.cv_metrics) {
+                        const cv = info.cv_metrics;
+                        html += `
+                    <tr>
+                        <td><strong>CV Folds:</strong></td>
+                        <td>${cv.n_folds || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Mean RMSE:</strong></td>
+                        <td>
+                            <span class="badge bg-${cv.rmse_mean < 20 ? 'success' : cv.rmse_mean < 40 ? 'warning' : 'danger'}">
+                                ${cv.rmse_mean?.toFixed(2) || 'N/A'} 
+                                ${cv.rmse_std ? '±' + cv.rmse_std.toFixed(2) : ''} Mg/ha
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Mean R²:</strong></td>
+                        <td>
+                            <span class="badge bg-${cv.r2_mean >= 0.7 ? 'success' : cv.r2_mean >= 0.5 ? 'warning' : 'danger'}">
+                                ${cv.r2_mean?.toFixed(3) || 'N/A'}
+                                ${cv.r2_std ? ' ±' + cv.r2_std.toFixed(3) : ''}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+                    }
+
+                    // Add feature importance if available
+                    if (info.feature_importance && Object.keys(info.feature_importance).length > 0) {
+                        const topFeatures = Object.entries(info.feature_importance)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 5);
+
+                        html += `
+                    <tr>
+                        <td colspan="2">
+                            <strong>Top 5 Features:</strong>
+                            <ul class="mb-0 mt-1">
+                                ${topFeatures.map(([feat, imp]) =>
+                            `<li><small>${feat}: ${(imp * 100).toFixed(1)}%</small></li>`
+                        ).join('')}
+                            </ul>
+                        </td>
+                    </tr>
+                `;
+                    }
+
+                    html += `</table>`;
+
+                    $('#modelInfoContent').html(html);
+
+                } else {
+                    $('#modelInfoContent').html(`
+                <div class="alert alert-warning mb-0">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Could not load model info
+                </div>
+            `);
+                }
+            } catch (error) {
+                console.error('Error loading model info:', error);
+                $('#modelInfoContent').html(`
+            <div class="alert alert-danger mb-0">
+                <i class="fas fa-exclamation-circle"></i>
+                Error: ${error.message}
+            </div>
+        `);
             }
         }
 
@@ -2061,12 +2428,33 @@
         function displayCarbonStats() {
             const carbonData = analysisResults.carbon;
 
-            // ✅ Add safety checks
+            // ✅ DEBUG LOGGING
+            console.log('=== Carbon Data Debug ===');
+            console.log('Full carbon data:', carbonData);
+            console.log('Model info:', carbonData?.model_info);
+            console.log('Reference dataset info:', carbonData?.model_info?.reference_dataset_info);
+            console.log('========================');
+
+            // Safety checks
             if (!carbonData || !carbonData.carbon_estimated || !carbonData.area_info) {
                 console.error('Invalid carbon data structure:', carbonData);
                 showAlert('Error displaying carbon statistics: Invalid data structure', 'danger');
                 return;
             }
+
+            // Extract dataset info with fallback
+            const datasetInfo = carbonData.model_info?.reference_dataset_info || {};
+            const datasetName = datasetInfo.name || 'Unknown Dataset';
+            const datasetResolution = datasetInfo.resolution || 'N/A';
+            const datasetYear = datasetInfo.year || 'N/A';
+            const datasetFullName = datasetInfo.full_name || datasetName;
+
+            console.log('Extracted dataset info:', {
+                datasetName,
+                datasetResolution,
+                datasetYear,
+                datasetFullName
+            });
 
             const stats = carbonData.carbon_estimated.statistics;
             const areaInfo = carbonData.area_info;
@@ -2074,112 +2462,133 @@
             const modelPerf = carbonData.model_performance;
             const processingTime = carbonData.processing_time || 'N/A';
 
-            // ✅ Safety checks for nested properties
+            // Safety checks for nested properties
             if (!stats || !areaInfo || !modelInfo || !modelPerf) {
                 console.error('Missing carbon data properties');
                 showAlert('Error: Incomplete carbon analysis data', 'danger');
                 return;
             }
 
-            // Display mode info banner
-            let modeBanner = '';
+            const hasCV = modelPerf.cv_folds && modelPerf.r2_score !== undefined;
             const calculationMode = modelInfo.calculation_mode || 'unknown';
             const calculationAreaHa = areaInfo.calculation_area_ha || areaInfo.area_ha || 0;
             const filteringAreaHa = areaInfo.filtering_area_ha || calculationAreaHa;
 
+            // ✅ Enhanced banner with dataset info and validation metrics
+            let modeBanner = '';
+
             if (calculationMode === 'clipped_aoi') {
                 modeBanner = `
-            <div class="alert alert-success mb-3">
-                <i class="fas fa-cut"></i> 
-                <strong>Clipped Mode:</strong> Both visualization and statistics are calculated for the precise AOI boundary only.
-                <br><small>
-                    <i class="fas fa-info-circle"></i> 
-                    Area: ${calculationAreaHa.toLocaleString()} ha
-                    ${areaInfo.description ? ' - ' + areaInfo.description : ''}
-                </small>
+        <div class="alert alert-success mb-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <i class="fas fa-cut"></i> 
+                    <strong>Clipped Mode</strong>
+                    <br><small>
+                        <i class="fas fa-info-circle"></i> 
+                        Area: ${calculationAreaHa.toLocaleString()} ha
+                        ${areaInfo.description ? '<br>' + areaInfo.description : ''}
+                    </small>
+                </div>
+                <div class="col-md-6">
+                    <strong><i class="fas fa-database"></i> Reference Dataset</strong>
+                    <br><small>
+                        ${datasetName} (${datasetYear})
+                        <br>Resolution: ${datasetResolution}m
+                    </small>
+                </div>
             </div>
-        `;
-            } else if (calculationMode === 'full_tiles') {
-                modeBanner = `
-            <div class="alert alert-info mb-3">
-                <i class="fas fa-layer-group"></i> 
-                <strong>Full Tiles Mode:</strong> Imagery filtered using AOI (${filteringAreaHa.toLocaleString()} ha), 
-                but statistics calculated for bounding box area (${calculationAreaHa.toLocaleString()} ha).
-                <br><small class="text-muted">
-                    <i class="fas fa-info-circle"></i> 
-                    ${areaInfo.description || 'Statistics cover larger area than visual boundary'}
-                </small>
+            ${hasCV ? `
+            <div class="row mt-2">
+                <div class="col-md-12">
+                    <small class="text-success">
+                        <i class="fas fa-check-circle"></i>
+                        <strong>Validated Model:</strong> ${modelPerf.cv_folds}-fold cross-validation 
+                        (R² = ${modelPerf.r2_score.toFixed(3)}, RMSE = ${modelPerf.rmse.toFixed(2)}${modelPerf.rmse_std ? ' ± ' + modelPerf.rmse_std.toFixed(2) : ''} Mg/ha)
+                    </small>
+                </div>
             </div>
+            ` : ''}
+        </div>
         `;
             } else {
                 modeBanner = `
-            <div class="alert alert-warning mb-3">
-                <i class="fas fa-exclamation-triangle"></i> 
-                <strong>Analysis Mode:</strong> ${calculationMode}
-                <br><small>Area: ${calculationAreaHa.toLocaleString()} ha</small>
+        <div class="alert alert-info mb-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <i class="fas fa-layer-group"></i> 
+                    <strong>Full Tiles Mode</strong>
+                    <br><small>
+                        Filtering: ${filteringAreaHa.toLocaleString()} ha (AOI)<br>
+                        Calculation: ${calculationAreaHa.toLocaleString()} ha (Bounding Box)
+                    </small>
+                </div>
+                <div class="col-md-6">
+                    <strong><i class="fas fa-database"></i> Reference Dataset</strong>
+                    <br><small>
+                        ${datasetName} (${datasetYear})
+                        <br>Resolution: ${datasetResolution}m
+                    </small>
+                </div>
             </div>
+            ${hasCV ? `
+            <div class="row mt-2">
+                <div class="col-md-12">
+                    <small class="text-success">
+                        <i class="fas fa-check-circle"></i>
+                        <strong>Validated Model:</strong> ${modelPerf.cv_folds}-fold cross-validation 
+                        (R² = ${modelPerf.r2_score.toFixed(3)}, RMSE = ${modelPerf.rmse.toFixed(2)}${modelPerf.rmse_std ? ' ± ' + modelPerf.rmse_std.toFixed(2) : ''} Mg/ha)
+                    </small>
+                </div>
+            </div>
+            ` : ''}
+        </div>
         `;
             }
 
-            // Update or create mode banner
             if ($('#carbonModeInfo').length === 0) {
                 $('#carbonStats').prepend(`<div id="carbonModeInfo">${modeBanner}</div>`);
             } else {
                 $('#carbonModeInfo').html(modeBanner);
             }
 
-            // Carbon Density Table
+            // ✅ Carbon Density Table
             const densityHtml = `
-        <tr>
-            <td><strong>Mean:</strong></td>
-            <td>${(stats.mean || 0).toFixed(2)} Mg/ha</td>
-        </tr>
-        <tr>
-            <td><strong>Std Dev:</strong></td>
-            <td>${(stats.std_dev || 0).toFixed(2)} Mg/ha</td>
-        </tr>
-        <tr>
-            <td><strong>Min:</strong></td>
-            <td>${(stats.min || 0).toFixed(2)} Mg/ha</td>
-        </tr>
-        <tr>
-            <td><strong>Max:</strong></td>
-            <td>${(stats.max || 0).toFixed(2)} Mg/ha</td>
-        </tr>
-    `;
+        <tr><td><strong>Mean:</strong></td><td>${(stats.mean || 0).toFixed(2)} Mg/ha</td></tr>
+        <tr><td><strong>Std Dev:</strong></td><td>${(stats.std_dev || 0).toFixed(2)} Mg/ha</td></tr>
+        <tr><td><strong>Min:</strong></td><td>${(stats.min || 0).toFixed(2)} Mg/ha</td></tr>
+        <tr><td><strong>Max:</strong></td><td>${(stats.max || 0).toFixed(2)} Mg/ha</td></tr>
+        <tr class="table-light">
+            <td colspan="2">
+                <small class="text-muted">
+                    <i class="fas fa-database"></i>
+                    <strong>Reference:</strong> ${datasetFullName}
+                </small>
+            </td>
+        </tr>`;
             $('#carbonDensityTable').html(densityHtml);
 
-            // Total Carbon Table
+            // ✅ Total Carbon Table
             const totalCarbonTons = areaInfo.total_carbon_tons || 0;
             const co2Equivalent = areaInfo.carbon_dioxide_equivalent_tons || 0;
 
             let totalHtml = `
-        <tr>
-            <td><strong>Calculation Area:</strong></td>
-            <td>${calculationAreaHa.toLocaleString()} ha</td>
-        </tr>
-        <tr>
-            <td><strong>Total Carbon:</strong></td>
-            <td>${totalCarbonTons.toLocaleString()} tons</td>
-        </tr>
-        <tr>
-            <td><strong>CO₂ Equivalent:</strong></td>
-            <td>${co2Equivalent.toLocaleString()} tons CO₂e</td>
-        </tr>
-    `;
+        <tr><td><strong>Calculation Area:</strong></td><td>${calculationAreaHa.toLocaleString()} ha</td></tr>
+        <tr><td><strong>Total Carbon:</strong></td><td>${totalCarbonTons.toLocaleString()} tons</td></tr>
+        <tr><td><strong>CO₂ Equivalent:</strong></td><td>${co2Equivalent.toLocaleString()} tons CO₂e</td></tr>`;
 
-            // Add comparison if different filtering vs calculation area
             if (filteringAreaHa !== calculationAreaHa && calculationMode === 'full_tiles') {
+                const areaDiff = calculationAreaHa - filteringAreaHa;
+                const areaDiffPercent = ((areaDiff / filteringAreaHa) * 100).toFixed(1);
                 totalHtml += `
         <tr class="table-info">
             <td colspan="2">
-                <small>
-                    <i class="fas fa-filter"></i>
-                    <strong>Filtering Area:</strong> ${filteringAreaHa.toLocaleString()} ha (AOI boundary)
-                </small>
+                <small><i class="fas fa-filter"></i>
+                <strong>Filtering Area:</strong> ${filteringAreaHa.toLocaleString()} ha (AOI boundary)
+                <br><i class="fas fa-exclamation-circle"></i>
+                Calculation area is ${areaDiffPercent}% larger (+${areaDiff.toLocaleString()} ha)</small>
             </td>
-        </tr>
-        `;
+        </tr>`;
             }
 
             totalHtml += `
@@ -2187,85 +2596,75 @@
             <td colspan="2">
                 <small class="text-muted">
                     <i class="fas fa-info-circle"></i>
-                    CO₂ equivalent = Carbon × 3.67
+                    CO₂ equivalent = Carbon × 3.67 (IPCC conversion factor)
                 </small>
             </td>
-        </tr>
-    `;
-
+        </tr>`;
             $('#carbonTotalTable').html(totalHtml);
 
-            // Model Info
-            const displayMode = modelInfo.display_mode || 'unknown';
+            // ✅ Model Info Section
+            const imagesUsed = modelInfo.images_used || 0;
+            const rmse = modelPerf.rmse || 0;
+            const rmseStd = modelPerf.rmse_std || 0;
+            const r2Score = modelPerf.r2_score;
+            const trainingSamples = modelPerf.training_samples || 0;
+            const cvFolds = modelPerf.cv_folds || 0;
+            const treeMask = modelInfo.tree_mask;
+
+            let rmseBadgeClass = 'bg-danger';
+            if (rmse < 20) rmseBadgeClass = 'bg-success';
+            else if (rmse < 40) rmseBadgeClass = 'bg-warning';
+
+            let r2BadgeClass = 'bg-secondary';
+            if (r2Score !== undefined) {
+                if (r2Score >= 0.7) r2BadgeClass = 'bg-success';
+                else if (r2Score >= 0.5) r2BadgeClass = 'bg-warning';
+                else r2BadgeClass = 'bg-danger';
+            }
+
             const modeBadge = calculationMode === 'clipped_aoi'
                 ? '<span class="badge bg-success"><i class="fas fa-cut"></i> Clipped AOI</span>'
                 : '<span class="badge bg-info"><i class="fas fa-layer-group"></i> Bounding Box</span>';
 
-            const imagesUsed = modelInfo.images_used || 0;
-            const rmse = modelPerf.rmse || 0;
-            const treeMask = modelInfo.tree_mask;
-
-            const modelHtml = `
+            let modelHtml = `
+        <div class="row mb-2"><div class="col-md-12"><h6><i class="fas fa-cogs"></i> Model Configuration</h6></div></div>
         <div class="row">
-            <div class="col-md-2">
-                <strong>Method:</strong><br>
-                ${modelInfo.method || 'N/A'}
-            </div>
-            <div class="col-md-2">
-                <strong>Predictors:</strong><br>
-                ${modelInfo.predictors || 0} bands
-            </div>
-            <div class="col-md-2">
-                <strong>Images Used:</strong><br>
-                <span class="badge bg-primary">${imagesUsed}</span>
-            </div>
-            <div class="col-md-2">
-                <strong>RMSE:</strong><br>
-                <span class="badge ${rmse < 20 ? 'bg-success' : rmse < 40 ? 'bg-warning' : 'bg-danger'}">
-                    ${rmse.toFixed(2)} Mg/ha
-                </span>
-            </div>
-            <div class="col-md-2">
-                <strong>Calculation:</strong><br>
-                ${modeBadge}
-            </div>
-            <div class="col-md-2">
-                <strong>Tree Mask:</strong><br>
-                ${treeMask ? '<i class="fas fa-check text-success"></i> Applied' : '<i class="fas fa-times text-danger"></i> Not Applied'}
-            </div>
-        </div>
-        <div class="row mt-2">
-            <div class="col-md-3">
-                <strong>Scale:</strong><br>
-                ${modelInfo.scale || 250}m resolution
-            </div>
-            <div class="col-md-3">
-                <strong>Processing Time:</strong><br>
-                <span class="badge bg-info">
-                    <i class="fas fa-clock"></i> ${formatDuration(processingTime)}
-                </span>
-            </div>
-            <div class="col-md-6">
-                <small class="text-muted">
-                    ${modelPerf.description || 'Model performance metric'}
-                </small>
-            </div>
-        </div>
-        ${modelInfo.date_range ? `
-        <div class="row mt-2">
-            <div class="col-md-12">
-                <small class="text-muted">
-                    <i class="fas fa-calendar"></i>
-                    <strong>Date Range:</strong> ${modelInfo.date_range}
-                </small>
-            </div>
-        </div>
-        ` : ''}
-    `;
-            $('#carbonModelInfo').html(modelHtml);
+            <div class="col-md-3"><strong>Method:</strong><br><small>${modelInfo.method || 'Linear Regression'}</small></div>
+            <div class="col-md-3"><strong>Reference Dataset:</strong><br><small>${datasetName} (${datasetYear})</small></div>
+            <div class="col-md-3"><strong>Sentinel-2 Images:</strong><br><span class="badge bg-secondary">${imagesUsed}</span></div>
+            <div class="col-md-3"><strong>Processing Scale:</strong><br>${modelInfo.scale || 250}m</div>
+        </div>`;
 
+            if (trainingSamples > 0) {
+                modelHtml += `
+        <div class="row mt-2"><div class="col-md-12"><h6><i class="fas fa-graduation-cap"></i> Training & Validation</h6></div></div>
+        <div class="row">
+            <div class="col-md-3"><strong>Training Samples:</strong><br><span class="badge bg-primary">${trainingSamples.toLocaleString()}</span></div>
+            ${cvFolds > 0 ? `<div class="col-md-2"><strong>Validation:</strong><br><span class="badge bg-success">${cvFolds}-Fold CV</span></div>` : ''}
+            <div class="col-md-3"><strong>RMSE:</strong><br><span class="badge ${rmseBadgeClass}">${rmse.toFixed(2)}${rmseStd ? ' ± ' + rmseStd.toFixed(2) : ''} Mg/ha</span></div>
+            ${r2Score !== undefined ? `<div class="col-md-2"><strong>R² Score:</strong><br><span class="badge ${r2BadgeClass}">${r2Score.toFixed(3)}</span></div>` : ''}
+            <div class="col-md-2"><strong>Tree Mask:</strong><br>${treeMask ? '<i class="fas fa-check text-success"></i> Applied' : '<i class="fas fa-times text-danger"></i> Not Applied'}</div>
+        </div>`;
+            }
+
+            // ✅ Tambahan: tampilkan info model pretrained
+            if (modelInfo.model_name) {
+                modelHtml += `
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-brain"></i>
+                    <strong>Pre-trained Model Used:</strong> ${modelInfo.model_name}
+                    <br><small>${modelInfo.algorithm || 'Unknown Algorithm'}</small>
+                </div>
+            </div>
+        </div>`;
+            }
+
+            $('#carbonModelInfo').html(modelHtml);
             $('#carbonStats').show();
         }
+
 
         function displayMetrics() {
             let html = '';
@@ -2326,7 +2725,7 @@
         `;
             }
 
-            // Carbon metrics (NEW)
+            // ✅ Carbon metrics with validation info
             if (analysisResults.carbon) {
                 const carbonData = analysisResults.carbon;
 
@@ -2340,7 +2739,9 @@
                 const totalCarbon = areaInfo.total_carbon_tons || 0;
                 const co2Equivalent = areaInfo.carbon_dioxide_equivalent_tons || 0;
                 const rmse = modelPerf.rmse || 0;
+                const r2Score = modelPerf.r2_score;
                 const calculationMode = modelInfo.calculation_mode || 'unknown';
+                const hasCV = modelPerf.cv_folds > 0;
 
                 html += `
         <div class="col-md-3">
@@ -2370,27 +2771,36 @@
                 <div class="metric-label">CO₂ Equivalent</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="metric-card">
-                <div class="metric-icon"><i class="fa-solid fa-chart-simple"></i></div>
-                <div class="metric-value">${rmse.toFixed(2)}</div>
-                <div class="metric-label">Model RMSE</div>
-            </div>
-        </div>
         `;
 
-                // ✅ Add comparison metric if available
-                if (areaInfo.precise_aoi_comparison) {
+                // ✅ Show RMSE or R² based on availability
+                if (hasCV && r2Score !== undefined) {
+                    // Show R² if we have cross-validation
+                    const r2BadgeClass = r2Score >= 0.7 ? 'success' : r2Score >= 0.5 ? 'warning' : 'danger';
                     html += `
             <div class="col-md-3">
-                <div class="metric-card border-warning">
-                    <div class="metric-icon"><i class="fa-solid fa-crosshairs"></i></div>
-                    <div class="metric-value">${areaInfo.precise_aoi_comparison.total_carbon_tons.toLocaleString()}
-                        <small>tons</small></div>
-                    <div class="metric-label">Precise AOI Carbon</div>
-                    <small class="text-warning d-block mt-1">
-                        <i class="fas fa-cut"></i> Actual boundary
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fa-solid fa-chart-simple"></i></div>
+                    <div class="metric-value">
+                        <span class="badge bg-${r2BadgeClass}" style="font-size: 1.5rem;">
+                            ${r2Score.toFixed(3)}
+                        </span>
+                    </div>
+                    <div class="metric-label">R² Score (CV)</div>
+                    <small class="text-muted d-block mt-1">
+                        RMSE: ${rmse.toFixed(2)} Mg/ha
                     </small>
+                </div>
+            </div>
+            `;
+                } else {
+                    // Show RMSE if no cross-validation
+                    html += `
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fa-solid fa-chart-simple"></i></div>
+                    <div class="metric-value">${rmse.toFixed(2)}</div>
+                    <div class="metric-label">Model RMSE</div>
                 </div>
             </div>
             `;
@@ -2886,6 +3296,39 @@
             const alertEl = $(alertHtml).appendTo('body');
             setTimeout(() => alertEl.fadeOut(() => alertEl.remove()), duration);
         }
+
+        $('#carbonReferenceDataset').on('change', function () {
+            updateDatasetDescription();
+            updateYearSelectorVisibility();
+        });
+
+        // Function to update dataset description
+        function updateDatasetDescription() {
+            const dataset = $('#carbonReferenceDataset').val();
+            const descriptions = {
+                'ESA_CCI': '<i class="fas fa-info-circle"></i> High-resolution (100m) global biomass map from ESA Climate Change Initiative. Most accurate for 2010-2020.',
+                'WCMC': '<i class="fas fa-info-circle"></i> Global carbon density map (300m) from UN World Conservation Monitoring Centre. Based on 2010 data.',
+                'GEDI': '<i class="fas fa-info-circle"></i> NASA GEDI L4B aboveground biomass (1km) from spaceborne lidar. Best for forest areas, 2019-2023.',
+                'Simard': '<i class="fas fa-info-circle"></i> Global forest canopy height (1km) converted to biomass. Based on 2011 data.'
+            };
+
+            $('#datasetDescription').html(descriptions[dataset] || '');
+        }
+
+        // Function to show/hide year selector based on dataset
+        function updateYearSelectorVisibility() {
+            const dataset = $('#carbonReferenceDataset').val();
+
+            if (dataset === 'ESA_CCI') {
+                $('#carbonYearSelector').show();
+            } else {
+                $('#carbonYearSelector').hide();
+            }
+        }
+
+        // Initialize on page load
+        updateDatasetDescription();
+        updateYearSelectorVisibility();
     </script>
 </body>
 
