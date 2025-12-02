@@ -857,10 +857,10 @@
         // ==========================================
         // CONFIGURATION
         // ==========================================
-        //const API_BASE_URL = 'https://backend.geomoka.husnifd.my.id/api';  // Change this to your backend URL
+        const API_BASE_URL = 'https://backend.geomoka.husnifd.my.id/api';  // Change this to your backend URL
         // const API_BASE_URL = 'http://154.12.231.185:8086/api';  // Change this to your backend URL
         // const API_BASE_URL = 'http://168.231.121.220:8080/api';  // Change this to your backend URL
-        const API_BASE_URL = 'http://localhost:5000/api';  // Change this to your backend URL
+        //const API_BASE_URL = 'http://localhost:5000/api';  // Change this to your backend URL
 
         // Global variables
         let map, resultMap;
@@ -2222,7 +2222,8 @@
                 </button>
             </li>
         `);
-
+                console.log('analysisResults')
+                console.log(analysisResults)
                 if ($('#showReference').is(':checked') && analysisResults.carbon.carbon_reference) {
                     tabsHtml.push(`
                 <li class="nav-item">
@@ -2444,7 +2445,6 @@
 
             // Extract dataset info with fallback
             const datasetInfo = carbonData.model_info?.reference_dataset_info || {};
-            console.log(datasetInfo)
             const datasetName = datasetInfo.name || 'Unknown Dataset';
             const datasetResolution = datasetInfo.resolution || 'N/A';
             const datasetYear = datasetInfo.year || 'N/A';
