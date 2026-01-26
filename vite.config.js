@@ -21,7 +21,11 @@ export default defineConfig({
     },
     preview: {
         port: 5500,
-        host: true
+        host: true,
+        allowedHosts: [
+            '.len.co.id',
+            '.husnifd.my.id',
+        ]
     },
     // ✅ Transform HTML to inject env vars
     transformIndexHtml: (html) => {
