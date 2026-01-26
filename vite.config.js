@@ -15,12 +15,12 @@ export default defineConfig({
         }
     },
     server: {
-        port: 5173,
+        port: 5500,
         host: true,
         open: false
     },
     preview: {
-        port: 3000,
+        port: 5500,
         host: true
     },
     // ✅ Transform HTML to inject env vars
