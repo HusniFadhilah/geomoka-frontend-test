@@ -1,0 +1,47 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# ===== Virtual Environment =====
+venv/
+.env/
+env/
+ENV/
+.venv/
+
+# ===== Flask =====
+instance/
+*.db
+*.sqlite3
+*.log
+
+# ===== Environment Variables =====
+.env
+.env.*
+*.env
+
+# ===== IDE / Editor =====
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== Testing / Coverage =====
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ===== Build / Distribution =====
+build/
+dist/
+*.egg-info/
+
+# ===== Jupyter =====
+.ipynb_checkpoints/
