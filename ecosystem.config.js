@@ -11,7 +11,8 @@ module.exports = {
 
             // ✅ Environment variables
             env: {
-                NODE_ENV: 'production'
+                NODE_ENV: 'production',
+                PORT: 5500
             },
 
             // ✅ PM2 Settings
@@ -33,7 +34,8 @@ module.exports = {
 
             // ✅ Environment-specific settings
             env_production: {
-                NODE_ENV: 'production'
+                NODE_ENV: 'production',
+                PORT: 5500
             }
         }
     ]
