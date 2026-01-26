@@ -9,8 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap"
     rel="stylesheet">
 
-  <!-- Vite will inject the module script -->
-  <script type="module" src="/src/main.js"></script>
   <!-- Bootstrap CSS -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
   <!-- Leaflet CSS -->
@@ -21,7 +19,7 @@
   <!-- Font Awesome (for existing icons) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  <link rel="stylesheet" href="./src/style.css">
+  <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
@@ -733,16 +731,27 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-  <script src="./src/custom-scripts.js"></script>
-  <script type="module">
-    // Import config
-    import config from './src/config.js';
+  <script src="/custom-scripts.js"></script>
 
-    // ==========================================
-    // CONFIGURATION - USE ENVIRONMENT VARIABLES
-    // ==========================================
+  <script>
+    // Configuration - will be replaced by Vite during build
+    const config = {
+      api: {
+        baseUrl: 'http://localhost:8000'  // Will be replaced by Vite
+      },
+      env: 'development',
+      appTitle: 'GEOSAVE'
+    };
+
     const API_BASE_URL = config.api.baseUrl;
+    console.log('📍 API Base URL:', API_BASE_URL);
+  </script>
 
+  <!-- Main Application Script -->
+  <script>
+    // ==========================================
+    // GEOSAVE APPLICATION
+    // ==========================================
 
     // Global variables
     let map, resultMap;
