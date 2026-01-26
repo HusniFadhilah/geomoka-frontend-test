@@ -261,11 +261,11 @@
 
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-dark bg-dark">
-        <div class="container-fluid d-flex align-items-center justify-content-between">
+    <nav class="navbar navbar-dark bg-dark py-2">
+        <div class="container-fluid d-flex align-items-center">
 
-            <!-- LEFT: LOGO UNDIP & PT LEN (ONLINE) -->
-            <div class="d-flex align-items-center gap-3">
+            <!-- LEFT: LOGO -->
+            <div class="d-flex align-items-center gap-3 me-3">
                 <img src="https://upload.wikimedia.org/wikipedia/id/2/20/Logo_Universitas_Diponegoro.png"
                     alt="Universitas Diponegoro" height="36" class="bg-light rounded p-1">
 
@@ -273,19 +273,23 @@
                     alt="PT LEN Industri" height="36" class="bg-light rounded p-1">
             </div>
 
-            <!-- CENTER: TITLE -->
-            <span class="navbar-brand mb-0 h1 text-center flex-grow-1">
-                <i class="fas fa-globe"></i>
-                SAVEGEO - Geospatial System for Vegetation, Land Cover, and Carbon Estimation
-                <small class="text-white d-block fs-6">
-                    Kolaborasi Universitas Diponegoro - PT LEN Industri
-                </small>
-            </span>
+            <!-- CENTER: TITLE (AUTO WRAP) -->
+            <div class="flex-grow-1 text-center px-3">
+                <div class="navbar-brand m-0 p-0 fw-semibold text-wrap">
+                    <i class="fas fa-globe"></i>
+                    SAVEGEO – Geospatial System for Vegetation, Land Cover, and Carbon Estimation
+                </div>
+                <div class="text-white-50 small text-wrap">
+                    Kolaborasi Universitas Diponegoro – PT LEN Industri
+                </div>
+            </div>
 
             <!-- RIGHT: STATUS -->
-            <span class="badge bg-light text-dark" id="eeStatus">
-                <i class="fas fa-spinner fa-spin"></i> Checking...
-            </span>
+            <div class="ms-3">
+                <span class="badge bg-light text-dark" id="eeStatus">
+                    <i class="fas fa-spinner fa-spin"></i> Checking...
+                </span>
+            </div>
 
         </div>
     </nav>
