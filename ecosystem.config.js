@@ -4,10 +4,10 @@ module.exports = {
             name: 'geosave-frontend',
 
             // ✅ Script untuk serve
-            script: 'serve',
+            script: 'npx',
 
             // ✅ Arguments untuk serve
-            args: 'dist -s -l 5500 -n',
+            args: 'serve dist -s -l 0.0.0.0:5500 -n',
 
             // ✅ Environment variables
             env: {
