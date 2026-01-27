@@ -531,13 +531,11 @@ body {
 }
 
 .alert-success {
-  background-color: rgba(76, 175, 80, 0.1);
   border-color: var(--primary-light);
   color: var(--primary-dark);
 }
 
 .alert-info {
-  background-color: rgba(0, 172, 193, 0.1);
   border-color: var(--info-color);
   color: #006064;
 }

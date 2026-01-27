@@ -1,14 +1,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>%VITE_APP_TITLE%</title>
+  <title>SAVEGEO - Geospatial System for Vegetation, Land Cover, and Carbon Estimation</title>
 
   <!-- Google Fonts - Montserrat -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap"
     rel="stylesheet">
-
+  <link rel="icon" type="image/png" href="/logo.jpg">
   <!-- Bootstrap CSS -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
   <!-- Leaflet CSS -->
@@ -547,27 +547,61 @@
 
                       <!-- Land Cover Stats (hidden by default) -->
                       <div id="landcoverStats" class="mt-4" style="display:none;">
-                        <div class="row">
-                          <div class="col-md-6">
-                            <h6 id="lcTitle" class="mb-2">Dynamic World</h6>
-                            <div class="table-responsive">
-                              <table class="table table-striped table-hover" id="lcTable">
-                                <thead class="table-primary">
-                                  <tr>
-                                    <th>Class</th>
-                                    <th>Area (ha)</th>
-                                    <th>Percentage</th>
-                                  </tr>
-                                </thead>
-                                <tbody><!-- injected --></tbody>
-                              </table>
+                        <h5 class="mb-3"><i class="fas fa-map"></i> Land Cover Analysis</h5>
+
+                        <!-- Dynamic World Section -->
+                        <div id="lcDynamicWorld" style="display:none;">
+                          <div class="row mb-4">
+                            <div class="col-md-6">
+                              <h6 class="mb-2"><i class="fas fa-globe"></i> Dynamic World</h6>
+                              <div class="table-responsive">
+                                <table class="table table-striped table-hover table-sm">
+                                  <thead class="table-primary">
+                                    <tr>
+                                      <th>Class</th>
+                                      <th>Area (ha)</th>
+                                      <th>Percentage</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody id="lcTableDW"><!-- injected --></tbody>
+                                </table>
+                              </div>
+                            </div>
+                            <div class="col-md-6">
+                              <h6 class="mb-2">Distribution Chart</h6>
+                              <div class="card">
+                                <div class="card-body">
+                                  <canvas id="lcPieDW"></canvas>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                          <div class="col-md-6">
-                            <h6 class="mb-2" id="lcChartTitle">Distribusi Land Cover</h6>
-                            <div class="card">
-                              <div class="card-body">
-                                <canvas id="lcPie"></canvas>
+                        </div>
+
+                        <!-- ESA WorldCover Section -->
+                        <div id="lcESAWorldCover" style="display:none;">
+                          <div class="row">
+                            <div class="col-md-6">
+                              <h6 class="mb-2"><i class="fas fa-satellite"></i> ESA WorldCover</h6>
+                              <div class="table-responsive">
+                                <table class="table table-striped table-hover table-sm">
+                                  <thead class="table-success">
+                                    <tr>
+                                      <th>Class</th>
+                                      <th>Area (ha)</th>
+                                      <th>Percentage</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody id="lcTableESA"><!-- injected --></tbody>
+                                </table>
+                              </div>
+                            </div>
+                            <div class="col-md-6">
+                              <h6 class="mb-2">Distribution Chart</h6>
+                              <div class="card">
+                                <div class="card-body">
+                                  <canvas id="lcPieESA"></canvas>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1149,8 +1183,7 @@
 
       // Load Region button
       $('#loadRegion').on('click', async function () {
-        if ($('#provinceSelect').val() && $('#citySelect').val() == '') showAlert(`Warning: Please use province boundary or select city`, 'danger', 5000);
-        else await loadRegionGeometry();
+        await loadRegionGeometry();
       });
 
       // Set Coordinate AOI
@@ -2023,10 +2056,23 @@
         $('#vegCharts').toggle(!!(analysisResults.vegetation && analysisResults.vegetation.indices));
         createCharts();
 
+        // Display land cover stats for both datasets if available
+        let hasLandCover = false;
+
         if (analysisResults.landcover?.Dynamic_World?.classes) {
-          renderLandCoverTableAndChart('Dynamic_World', 'Dynamic World');
-        } else if (analysisResults.landcover?.ESA_WorldCover?.classes) {
-          renderLandCoverTableAndChart('ESA_WorldCover', 'ESA WorldCover');
+          if (renderLandCoverTableAndChart('Dynamic_World', 'Dynamic World')) {
+            hasLandCover = true;
+          }
+        }
+
+        if (analysisResults.landcover?.ESA_WorldCover?.classes) {
+          if (renderLandCoverTableAndChart('ESA_WorldCover', 'ESA WorldCover')) {
+            hasLandCover = true;
+          }
+        }
+
+        if (hasLandCover) {
+          $('#landcoverStats').show();
         } else {
           $('#landcoverStats').hide();
         }
@@ -2042,64 +2088,72 @@
       const tabsHtml = [];
       let isFirst = true;
 
-      // Vegetation tabs
       if (analysisResults.vegetation) {
         if (analysisResults.vegetation.rgb_tile_url) {
           tabsHtml.push(`
-                <li class="nav-item">
-                    <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="rgb">
-                        <i class="fas fa-image"></i> RGB
-                    </button>
-                </li>
-            `);
+        <li class="nav-item">
+          <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="rgb">
+            <i class="fas fa-image"></i> RGB
+          </button>
+        </li>
+      `);
           isFirst = false;
         }
 
         for (const index in analysisResults.vegetation.indices) {
           tabsHtml.push(`
-                <li class="nav-item">
-                    <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="${index}">
-                        <i class="fas fa-leaf"></i> ${index}
-                    </button>
-                </li>
-            `);
+        <li class="nav-item">
+          <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="${index}">
+            <i class="fas fa-leaf"></i> ${index}
+          </button>
+        </li>
+      `);
           isFirst = false;
         }
       }
 
-      // Land cover tabs
+      // Land cover tabs - DENGAN LOGGING
       if (analysisResults.landcover) {
+        console.log('Land cover datasets:', Object.keys(analysisResults.landcover));
+
         for (const dataset in analysisResults.landcover) {
+          const data = analysisResults.landcover[dataset];
+          console.log(`Processing tab for ${dataset}:`, {
+            hasTileUrl: !!data.tile_url,
+            hasClasses: !!data.classes,
+            classCount: data.classes ? Object.keys(data.classes).length : 0
+          });
+
+          // ✅ ALWAYS CREATE TAB if dataset exists
           tabsHtml.push(`
-                <li class="nav-item">
-                    <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="${dataset}">
-                        <i class="fas fa-map"></i> ${dataset.replace('_', ' ')}
-                    </button>
-                </li>
-            `);
+        <li class="nav-item">
+          <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="${dataset}">
+            <i class="fas fa-map"></i> ${dataset.replace(/_/g, ' ')}
+          </button>
+        </li>
+      `);
           isFirst = false;
         }
       }
 
-      // Carbon tabs (NEW)
+      // Carbon tabs
       if (analysisResults.carbon) {
         tabsHtml.push(`
-            <li class="nav-item">
-                <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="carbon_estimated">
-                    <i class="fas fa-tree"></i> Carbon Stock
-                </button>
-            </li>
-        `);
-        console.log('analysisResults')
-        console.log(analysisResults)
+      <li class="nav-item">
+        <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="carbon_estimated">
+          <i class="fas fa-tree"></i> Carbon Stock
+        </button>
+      </li>
+    `);
+
         if ($('#showReference').is(':checked') && analysisResults.carbon.carbon_reference) {
           tabsHtml.push(`
-                <li class="nav-item">
-                    <button class="nav-link" data-bs-toggle="tab" data-layer="carbon_reference">
-                        <i class="fas fa-database"></i> Reference Carbon
-                    </button>
-                </li>
-            `);
+        <li class="nav-item">
+          <button class="nav-link" data-bs-toggle="tab" data-layer="carbon_reference">
+            <i class="fas fa-database"></i> Reference Carbon
+          </button>
+        </li>
+      `);
         }
 
         isFirst = false;
@@ -2675,6 +2729,82 @@
         }
       }
 
+      // ========= LAND COVER METRICS =========
+      if (analysisResults.landcover) {
+        // Count how many datasets were analyzed
+        const datasetsAnalyzed = Object.keys(analysisResults.landcover).length;
+
+        // Get total area from any available dataset
+        let totalArea = 0;
+        let dominantClass = '';
+        let dominantPercentage = 0;
+
+        // Try Dynamic World first
+        if (analysisResults.landcover.Dynamic_World?.classes) {
+          const classes = analysisResults.landcover.Dynamic_World.classes;
+          totalArea = Object.values(classes).reduce((sum, c) => sum + Number(c.area || 0), 0);
+
+          // Find dominant class
+          Object.entries(classes).forEach(([name, data]) => {
+            if (data.percentage > dominantPercentage) {
+              dominantClass = name;
+              dominantPercentage = data.percentage;
+            }
+          });
+        }
+        // Fallback to ESA
+        else if (analysisResults.landcover.ESA_WorldCover?.classes) {
+          const classes = analysisResults.landcover.ESA_WorldCover.classes;
+          totalArea = Object.values(classes).reduce((sum, c) => sum + Number(c.area || 0), 0);
+
+          Object.entries(classes).forEach(([name, data]) => {
+            if (data.percentage > dominantPercentage) {
+              dominantClass = name;
+              dominantPercentage = data.percentage;
+            }
+          });
+        }
+
+        if (totalArea > 0) {
+          html += `
+        <div class="col-md-3">
+          <div class="metric-card">
+            <div class="metric-icon"><i class="fa-solid fa-earth-asia"></i></div>
+            <div class="metric-value">${totalArea.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+              <small>ha</small>
+            </div>
+            <div class="metric-label">Total Area</div>
+          </div>
+        </div>
+      `;
+        }
+
+        if (dominantClass) {
+          html += `
+        <div class="col-md-3">
+          <div class="metric-card">
+            <div class="metric-icon"><i class="fa-solid fa-map"></i></div>
+            <div class="metric-value">${dominantPercentage.toFixed(1)}
+              <small>%</small>
+            </div>
+            <div class="metric-label">${dominantClass}</div>
+            <small class="text-muted">Dominant Class</small>
+          </div>
+        </div>
+      `;
+        }
+
+        html += `
+      <div class="col-md-3">
+        <div class="metric-card">
+          <div class="metric-icon"><i class="fa-solid fa-layer-group"></i></div>
+          <div class="metric-value">${datasetsAnalyzed}</div>
+          <div class="metric-label">Dataset${datasetsAnalyzed > 1 ? 's' : ''} Analyzed</div>
+        </div>
+      </div>
+    `;
+      }
+
       $('#metricsContainer').html(html);
     }
 
@@ -2730,80 +2860,158 @@
     function renderLandCoverTableAndChart(datasetKey, datasetLabel) {
       const bucket = analysisResults.landcover?.[datasetKey];
       if (!bucket || !bucket.classes) {
-        $('#landcoverStats').hide();
-        return;
+        console.warn(`No data for ${datasetKey}`);
+        return false;
       }
 
-      // ---------- table ----------
+      // Determine which section to use
+      let tableId, canvasId, sectionId;
+      if (datasetKey === 'Dynamic_World') {
+        tableId = 'lcTableDW';
+        canvasId = 'lcPieDW';
+        sectionId = 'lcDynamicWorld';
+      } else if (datasetKey === 'ESA_WorldCover') {
+        tableId = 'lcTableESA';
+        canvasId = 'lcPieESA';
+        sectionId = 'lcESAWorldCover';
+      } else {
+        return false;
+      }
+
+      console.log(`Rendering ${datasetKey}...`);
+
+      // ---------- Build Table ----------
       const classes = bucket.classes;
       const sorted = Object.entries(classes).sort((a, b) => Number(b[1].area) - Number(a[1].area));
-      const rows = sorted.map(([name, info]) => `
-                <tr>
-                <td><strong>${name}</strong></td>
-                <td>${Number(info.area || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-                <td>${Number(info.percentage || 0).toFixed(1)}%</td>
-                </tr>
-            `);
 
-      $('#lcTitle').text(datasetLabel);
-      $('#lcChartTitle').text(`Distribusi ${datasetLabel}`);
-      $('#lcTable tbody').html(rows.join(''));
-      $('#landcoverStats').show();
+      const rows = sorted.map(([name, info]) => {
+        const areaFormatted = Number(info.area || 0).toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+        const percentage = Number(info.percentage || 0).toFixed(1);
 
-      // ---------- chart ----------
-      // 1) pastikan canvas fresh (hapus lama, buat baru)
-      const $host = $('#lcPie').parent();
-      $('#lcPie').remove();
-      $host.append('<canvas id="lcPie"></canvas>');
+        return `
+      <tr>
+        <td>
+          <span style="display: inline-block; width: 12px; height: 12px; background-color: ${info.color}; margin-right: 5px; border: 1px solid #ccc;"></span>
+          <strong>${name}</strong>
+        </td>
+        <td>${areaFormatted}</td>
+        <td>
+          <span class="badge bg-primary">${percentage}%</span>
+        </td>
+      </tr>
+    `;
+      });
 
-      const canvas = document.getElementById('lcPie');
+      // Add total row
+      const totalArea = sorted.reduce((sum, [, info]) => sum + Number(info.area || 0), 0);
+      rows.push(`
+    <tr class="table-light">
+      <td><strong>Total</strong></td>
+      <td><strong>${totalArea.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}</strong></td>
+      <td><strong>100.0%</strong></td>
+    </tr>
+  `);
+
+      $(`#${tableId}`).html(rows.join(''));
+      $(`#${sectionId}`).show();
+
+      // ---------- Build Chart ----------
+      const $host = $(`#${canvasId}`).parent();
+      $(`#${canvasId}`).remove();
+      $host.append(`<canvas id="${canvasId}"></canvas>`);
+
+      const canvas = document.getElementById(canvasId);
       if (!canvas) {
-        console.error('lcPie canvas not found');
-        return;
+        console.error(`${canvasId} canvas not found`);
+        return false;
       }
+
       const ctx = canvas.getContext('2d');
       if (!ctx) {
-        console.error('Failed to acquire 2D context for lcPie');
-        return;
+        console.error(`Failed to acquire 2D context for ${canvasId}`);
+        return false;
       }
 
-      // 2) siapkan data
-      const labels = sorted.map(([n]) => n);
-      const values = sorted.map(([, i]) => Number(i.area || 0));
-      const colors = sorted.map(([, i]) => i.color || '#999');
+      // Prepare chart data
+      const labels = sorted.map(([name]) => name);
+      const values = sorted.map(([, info]) => Number(info.area || 0));
+      const colors = sorted.map(([, info]) => info.color || '#999');
 
-      // 3) destroy chart lama (jika ada)
-      if (charts.landcoverPie && typeof charts.landcoverPie.destroy === 'function') {
-        charts.landcoverPie.destroy();
-        charts.landcoverPie = null;
+      // Destroy old chart if exists
+      const chartKey = `landcoverPie_${datasetKey}`;
+      if (charts[chartKey] && typeof charts[chartKey].destroy === 'function') {
+        charts[chartKey].destroy();
       }
 
-      // 4) buat chart
-      charts.landcoverPie = new Chart(ctx, {
+      // Create new chart
+      charts[chartKey] = new Chart(ctx, {
         type: 'pie',
         data: {
           labels,
-          datasets: [{ data: values, backgroundColor: colors, borderWidth: 1 }]
+          datasets: [{
+            data: values,
+            backgroundColor: colors,
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
         },
         options: {
           responsive: true,
-          maintainAspectRatio: false,
+          maintainAspectRatio: true,
           plugins: {
-            legend: { position: 'right' },
-            title: { display: true, text: `Distribusi ${datasetLabel}` },
+            legend: {
+              position: 'right',
+              labels: {
+                boxWidth: 15,
+                padding: 10,
+                font: { size: 11 },
+                generateLabels: function (chart) {
+                  const data = chart.data;
+                  if (data.labels.length && data.datasets.length) {
+                    return data.labels.map((label, i) => {
+                      const value = data.datasets[0].data[i];
+                      const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                      const percentage = ((value / total) * 100).toFixed(1);
+
+                      return {
+                        text: `${label} (${percentage}%)`,
+                        fillStyle: data.datasets[0].backgroundColor[i],
+                        hidden: false,
+                        index: i
+                      };
+                    });
+                  }
+                  return [];
+                }
+              }
+            },
+            title: {
+              display: true,
+              text: `${datasetLabel} - ${bucket.year || 'N/A'}`,
+              font: { size: 14, weight: 'bold' }
+            },
             tooltip: {
               callbacks: {
-                label: (c) => {
-                  const total = values.reduce((a, b) => a + b, 0) || 1;
-                  const v = c.parsed;
-                  const pct = (v / total * 100).toFixed(1);
-                  return ` ${c.label}: ${v.toLocaleString()} ha (${pct}%)`;
+                label: (context) => {
+                  const value = context.parsed;
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = ((value / total) * 100).toFixed(1);
+                  return ` ${context.label}: ${value.toLocaleString()} ha (${percentage}%)`;
                 }
               }
             }
           }
         }
       });
+
+      console.log(`✓ ${datasetKey} rendered successfully`);
+      return true;
     }
 
     function createMeanChart() {
