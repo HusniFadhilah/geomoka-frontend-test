@@ -372,6 +372,7 @@
                     <input class="form-check-input" type="checkbox" id="dynamicWorld" checked>
                     <label class="form-check-label" for="dynamicWorld">
                       Dynamic World
+                      <small class="text-muted d-block">Google - Near real-time (10m)</small>
                     </label>
                   </div>
 
@@ -379,6 +380,15 @@
                     <input class="form-check-input" type="checkbox" id="esaWorld">
                     <label class="form-check-label" for="esaWorld">
                       ESA WorldCover
+                      <small class="text-muted d-block">ESA - 2020/2021 (10m)</small>
+                    </label>
+                  </div>
+
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="esriLandCover">
+                    <label class="form-check-label" for="esriLandCover">
+                      ESRI Land Cover
+                      <small class="text-muted d-block">ESRI - 2017-2023 (10m)</small>
                     </label>
                   </div>
 
@@ -580,7 +590,7 @@
 
                         <!-- ESA WorldCover Section -->
                         <div id="lcESAWorldCover" style="display:none;">
-                          <div class="row">
+                          <div class="row mb-4">
                             <div class="col-md-6">
                               <h6 class="mb-2"><i class="fas fa-satellite"></i> ESA WorldCover</h6>
                               <div class="table-responsive">
@@ -601,6 +611,35 @@
                               <div class="card">
                                 <div class="card-body">
                                   <canvas id="lcPieESA"></canvas>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- ESRI Land Cover Section (NEW) -->
+                        <div id="lcESRILandCover" style="display:none;">
+                          <div class="row">
+                            <div class="col-md-6">
+                              <h6 class="mb-2"><i class="fas fa-map-marked-alt"></i> ESRI Land Cover</h6>
+                              <div class="table-responsive">
+                                <table class="table table-striped table-hover table-sm">
+                                  <thead class="table-info">
+                                    <tr>
+                                      <th>Class</th>
+                                      <th>Area (ha)</th>
+                                      <th>Percentage</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody id="lcTableESRI"><!-- injected --></tbody>
+                                </table>
+                              </div>
+                            </div>
+                            <div class="col-md-6">
+                              <h6 class="mb-2">Distribution Chart</h6>
+                              <div class="card">
+                                <div class="card-body">
+                                  <canvas id="lcPieESRI"></canvas>
                                 </div>
                               </div>
                             </div>
@@ -794,7 +833,11 @@
     let selectedIndices = ['NDVI', 'NDWI', 'MNDWI', 'NDBI'];
     let analysisResults = {};
     let geeTileLayers = {};
-    let charts = {};
+    let charts = {
+      landcoverPie_Dynamic_World: null,
+      landcoverPie_ESA_WorldCover: null,
+      landcoverPie_ESRI_LandCover: null
+    };
     let legendControl = null;
     let provinceSelect, citySelect, districtSelect, villageSelect
     charts.landcoverPie = null;
@@ -1051,16 +1094,28 @@
       provinceSelect.onchange = async (e) => {
         const code = e.target.value;
         if (code) {
+          // Load cities and add "Use Province" option
           await loadRegion("city", code, "citySelect", "City");
+
+          // Add "Use Province" as first option
+          const useProvinceOption = '<option value="use_province" selected>📍 Use Province Only</option>';
+          $('#citySelect').prepend(useProvinceOption);
+
           citySelect.disabled = false;
+
+          // Reset lower levels
+          districtSelect.innerHTML = '<option value="">-- Select City First --</option>';
+          districtSelect.disabled = true;
+          villageSelect.innerHTML = '<option value="">-- Select District First --</option>';
+          villageSelect.disabled = true;
         } else {
           citySelect.innerHTML = '<option value="">-- Select Province First --</option>';
           citySelect.disabled = true;
+          districtSelect.innerHTML = '<option value="">-- Select City First --</option>';
+          districtSelect.disabled = true;
+          villageSelect.innerHTML = '<option value="">-- Select District First --</option>';
+          villageSelect.disabled = true;
         }
-        districtSelect.innerHTML = '<option value="">-- Select City First --</option>';
-        districtSelect.disabled = true;
-        villageSelect.innerHTML = '<option value="">-- Select District First --</option>';
-        villageSelect.disabled = true;
       };
 
       citySelect.onchange = async (e) => {
@@ -1820,6 +1875,7 @@
           const lcStartTime = Date.now();
 
           const lcData = await runLandCoverAnalysis();
+          console.log('Land cover analysis returned:', lcData); // ✅ ADD THIS
 
           const lcDuration = ((Date.now() - lcStartTime) / 1000).toFixed(2);
           processTimers.landcover = lcDuration;
@@ -1828,6 +1884,16 @@
           if (lcData) {
             analysisResults.landcover = lcData;
             analysisResults.landcover.processing_time = lcDuration;
+
+            // ✅ Debug specific datasets
+            if (lcData.ESA_WorldCover) {
+              console.log('ESA WorldCover data received:', {
+                hasTileUrl: !!lcData.ESA_WorldCover.tile_url,
+                hasClasses: !!lcData.ESA_WorldCover.classes,
+                classCount: lcData.ESA_WorldCover.classes ? Object.keys(lcData.ESA_WorldCover.classes).length : 0,
+                tileUrl: lcData.ESA_WorldCover.tile_url?.substring(0, 100)
+              });
+            }
           }
         }
 
@@ -1914,6 +1980,7 @@
       const datasets = [];
       if ($('#dynamicWorld').is(':checked')) datasets.push('Dynamic_World');
       if ($('#esaWorld').is(':checked')) datasets.push('ESA_WorldCover');
+      if ($('#esriLandCover').is(':checked')) datasets.push('ESRI_LandCover'); // ✅ NEW
 
       if (datasets.length === 0) {
         showAlert('Please select at least one land cover dataset', 'warning');
@@ -1938,7 +2005,6 @@
 
       if (response.success) {
         console.log('✓ Land cover analysis complete:', response.data);
-        console.log(response)
         return response.data;
       } else {
         showAlert('Land cover analysis failed: ' + response.error, 'danger');
@@ -2015,18 +2081,61 @@
                 `;
           }
         } else if (layerName === 'Dynamic_World' && analysisResults.landcover?.Dynamic_World?.classes) {
+          div.innerHTML += '<div style="margin-bottom:5px;"><strong>Dynamic World</strong></div>';
           for (const [nm, d] of Object.entries(analysisResults.landcover.Dynamic_World.classes)) {
-            div.innerHTML += `<div class="legend-item"><span class="legend-color" style="background:${d.color}"></span>${nm}</div>`;
+            div.innerHTML += `
+          <div class="legend-item">
+            <span class="legend-color" style="background:${d.color}"></span>
+            ${nm} (${d.percentage}%)
+          </div>`;
           }
         } else if (layerName === 'ESA_WorldCover') {
+          div.innerHTML += '<div style="margin-bottom:5px;"><strong>ESA WorldCover</strong></div>';
+
           const classes = analysisResults.landcover?.ESA_WorldCover?.classes;
           if (classes) {
-            for (const [nm, d] of Object.entries(classes)) {
-              div.innerHTML += `<div class="legend-item"><span class="legend-color" style="background:${d.color}"></span>${nm}</div>`;
+            console.log('ESA Legend - classes:', classes);
+
+            // Sort by class value for proper order
+            const sorted = Object.entries(classes).sort((a, b) => {
+              return (a[1].class_value || 0) - (b[1].class_value || 0);
+            });
+
+            for (const [nm, d] of sorted) {
+              div.innerHTML += `
+            <div class="legend-item">
+              <span class="legend-color" style="background:${d.color}"></span>
+              ${nm} (${d.percentage}%)
+            </div>`;
             }
           } else {
-            for (const [nm, color] of Object.entries(ESA_WORLDCOVER_LEGEND)) {
-              div.innerHTML += `<div class="legend-item"><span class="legend-color" style="background:${color}"></span>${nm}</div>`;
+            console.warn('No ESA classes for legend');
+            // Fallback to default legend
+            for (const [classVal, info] of Object.entries(ESA_WORLDCOVER_LEGEND)) {
+              div.innerHTML += `
+            <div class="legend-item">
+              <span class="legend-color" style="background:${info}"></span>
+              ${classVal}
+            </div>`;
+            }
+          }
+        } else if (layerName === 'ESRI_LandCover') {
+          div.innerHTML += '<div style="margin-bottom:5px;"><strong>ESRI Land Cover</strong></div>';
+
+          const classes = analysisResults.landcover?.ESRI_LandCover?.classes;
+          if (classes) {
+            console.log('ESRI Legend - classes:', classes);
+
+            const sorted = Object.entries(classes).sort((a, b) => {
+              return (a[1].class_value || 0) - (b[1].class_value || 0);
+            });
+
+            for (const [nm, d] of sorted) {
+              div.innerHTML += `
+            <div class="legend-item">
+              <span class="legend-color" style="background:${d.color}"></span>
+              ${nm} (${d.percentage}%)
+            </div>`;
             }
           }
         } else {
@@ -2067,6 +2176,12 @@
 
         if (analysisResults.landcover?.ESA_WorldCover?.classes) {
           if (renderLandCoverTableAndChart('ESA_WorldCover', 'ESA WorldCover')) {
+            hasLandCover = true;
+          }
+        }
+
+        if (analysisResults.landcover?.ESRI_LandCover?.classes) {
+          if (renderLandCoverTableAndChart('ESRI_LandCover', 'ESRI Land Cover')) {
             hasLandCover = true;
           }
         }
@@ -2195,6 +2310,7 @@
     }
 
     function switchResultLayer(layerName) {
+      // Remove all existing layers
       for (const key in geeTileLayers) {
         if (geeTileLayers[key]) {
           resultMap.removeLayer(geeTileLayers[key]);
@@ -2210,6 +2326,7 @@
         tileUrl = analysisResults.vegetation.indices[layerName].tile_url;
       } else if (analysisResults.landcover && analysisResults.landcover[layerName]) {
         tileUrl = analysisResults.landcover[layerName].tile_url;
+        console.log(`ESA/DW tile URL: ${tileUrl}`);
       } else if (layerName === 'carbon_estimated' && analysisResults.carbon) {
         tileUrl = analysisResults.carbon.carbon_estimated.tile_url;
       } else if (layerName === 'carbon_reference' && analysisResults.carbon) {
@@ -2217,15 +2334,28 @@
       }
 
       if (tileUrl) {
+        console.log(`Loading tile: ${tileUrl.substring(0, 100)}...`);
+
         geeTileLayers[layerName] = L.tileLayer(tileUrl, {
           attribution: '© Google Earth Engine',
           className: 'gee-tile-layer',
-          maxPixels: 18
+          maxZoom: 18,
+          errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' // transparent 1x1
         }).addTo(resultMap);
 
-        console.log('✓ Loaded GEE layer:', layerName);
+        // Log tile loading events
+        geeTileLayers[layerName].on('tileload', function () {
+          console.log(`✓ Tile loaded for ${layerName}`);
+        });
+
+        geeTileLayers[layerName].on('tileerror', function (error) {
+          console.error(`✗ Tile error for ${layerName}:`, error);
+        });
+
+        console.log(`✓ Layer added to map: ${layerName}`);
       } else {
-        console.warn('No tile URL for layer:', layerName);
+        console.warn(`No tile URL for layer: ${layerName}`);
+        showAlert(`No visualization available for ${layerName}`, 'warning', 3000);
       }
 
       updateLegend(layerName);
@@ -2874,6 +3004,10 @@
         tableId = 'lcTableESA';
         canvasId = 'lcPieESA';
         sectionId = 'lcESAWorldCover';
+      } else if (datasetKey === 'ESRI_LandCover') {
+        tableId = 'lcTableESRI';
+        canvasId = 'lcPieESRI';
+        sectionId = 'lcESRILandCover';
       } else {
         return false;
       }
