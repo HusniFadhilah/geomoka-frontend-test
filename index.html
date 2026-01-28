@@ -100,6 +100,25 @@
             <span class="sidebar-menu-text">Pemetaan Bencana</span>
           </a>
         </li>
+        <li>
+          <a class="sidebar-menu-item" onclick="switchModule('guide')" id="menu-guide" data-tooltip="Panduan Lengkap">
+            <i class="bi bi-book-fill"></i>
+            <span class="sidebar-menu-text">Panduan Lengkap</span>
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-menu-item" onclick="switchModule('about')" id="menu-about" data-tooltip="Tentang Program">
+            <i class="bi bi-info-circle-fill"></i>
+            <span class="sidebar-menu-text">Tentang Program</span>
+          </a>
+        </li>
+        <li>
+          <a class="sidebar-menu-item" onclick="switchModule('details')" id="menu-details"
+            data-tooltip="Detail Program">
+            <i class="bi bi-file-text-fill"></i>
+            <span class="sidebar-menu-text">Detail Program</span>
+          </a>
+        </li>
       </ul>
     </div>
 
@@ -113,7 +132,87 @@
 
       <!-- Carbon Analysis Module (Default) -->
       <div class="module-container active" id="module-carbon">
+
         <div class="container-fluid mt-4">
+          <div class="text-center mb-4">
+            <h3 class="fw-bold mb-1">
+              <i class="bi bi-tree-fill text-success"></i>
+              Analisis Stok Karbon & Vegetasi
+            </h3>
+            <p class="text-muted mb-0">
+              Platform estimasi karbon berbasis AI (Sentinel-2 & Google Earth Engine)
+            </p>
+          </div>
+          <!-- ============================================ -->
+          <!-- ACCORDION: Panduan Memulai -->
+          <!-- ============================================ -->
+          <div class="accordion mb-4" id="accordionGettingStarted">
+
+            <!-- Accordion Item 1: Quick Start -->
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="headingOne">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne"
+                  aria-expanded="true" aria-controls="collapseOne">
+                  <i class="bi bi-rocket-takeoff-fill me-2"></i> Quick Start Analisis Stok Karbon & Vegetasi
+                </button>
+              </h2>
+              <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne"
+                data-bs-parent="#accordionGettingStarted">
+                <div class="accordion-body">
+                  <ol class="mb-0 ps-3">
+                    <li><strong>Pilih AOI</strong> – Scroll ke bagian Area of Interest</li>
+                    <li><strong>Atur Parameter</strong> – Gunakan panel kiri</li>
+                    <li><strong>Run Analysis</strong> – Tunggu hasil & visualisasi</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+            <!-- Accordion Item 2: Langkah Detail -->
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="headingTwo">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                  data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                  <i class="bi bi-list-ol me-2"></i> Langkah Analisis
+                </button>
+              </h2>
+              <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo"
+                data-bs-parent="#accordionGettingStarted">
+                <div class="accordion-body">
+                  <ul class="mb-2">
+                    <li><strong>Pilih Area:</strong> Admin Indonesia, Koordinat + Buffer, atau Gambar Manual</li>
+                    <li><strong>Parameter:</strong> Tahun, Periode, Cloud Threshold, Jenis Analisis</li>
+                    <li><strong>Proses:</strong> Klik Run Analysis (±10 detik–1 menit)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- Accordion Item 3: Tips & Bantuan -->
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="headingThree">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                  data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                  <i class="bi bi-lightbulb-fill me-2"></i> Tips & Bantuan
+                </button>
+              </h2>
+              <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree"
+                data-bs-parent="#accordionGettingStarted">
+                <div class="accordion-body">
+                  <ul class="mb-2">
+                    <li>Cloud threshold ideal: <strong>20–40%</strong></li>
+                    <li>Periode analisis: <strong>3–6 bulan</strong></li>
+                    <li>Mulai dari area kecil untuk testing</li>
+                  </ul>
+                  <button class="btn btn-sm btn-info" onclick="switchModule('guide')">
+                    <i class="bi bi-book-fill"></i> Buka Panduan Lengkap
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
           <div class="row">
             <!-- Sidebar -->
             <div class="col-lg-3">
@@ -124,8 +223,8 @@
                 <div class="mb-3">
                   <label class="form-label">Analysis Type</label>
                   <select class="form-select" id="analysisType">
-                    <option value="vegetation">Vegetation Indices</option>
                     <option value="landcover">Land Cover</option>
+                    <option value="vegetation">Vegetation Indices</option>
                     <option value="carbon">Carbon Stock Estimation</option>
                     <option value="combined">Combined Analysis</option>
                   </select>
@@ -760,9 +859,7 @@
                       Fitur ini akan mencakup:
                     </p>
                     <ul class="mt-2 mb-0">
-                      <li>Deteksi dan monitoring banjir</li>
-                      <li>Analisis risiko longsor</li>
-                      <li>Pemetaan area terdampak kebakaran hutan</li>
+                      <li>Monitoring dan pemetaan area terdampak banjir</li>
                       <li>Monitoring perubahan lahan pasca bencana</li>
                     </ul>
                   </div>
@@ -773,7 +870,7 @@
                       <div class="card">
                         <div class="card-body text-center">
                           <i class="fas fa-water fa-3x text-info mb-3"></i>
-                          <h5>Flood Detection</h5>
+                          <h5>Flood Monitoring</h5>
                           <p class="text-muted">Coming Soon</p>
                         </div>
                       </div>
@@ -782,12 +879,1051 @@
                       <div class="card">
                         <div class="card-body text-center">
                           <i class="fas fa-fire fa-3x text-danger mb-3"></i>
-                          <h5>Forest Fire Monitoring</h5>
+                          <h5>Land Change Monitoring</h5>
                           <p class="text-muted">Coming Soon</p>
                         </div>
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- About Program Module (NEW) -->
+      <div class="module-container" id="module-about">
+        <div class="container-fluid mt-4">
+          <div class="row">
+            <div class="col-12">
+              <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                  <h4 class="mb-0"><i class="bi bi-info-circle-fill"></i> Tentang Program</h4>
+                </div>
+                <div class="card-body">
+
+                  <!-- Program Overview -->
+                  <div class="alert alert-primary">
+                    <h5 class="alert-heading"><i class="bi bi-star-fill"></i> AI Imagery Analytics
+                      Platform</h5>
+                    <p class="mb-0">
+                      Platform inovatif berbasis kecerdasan buatan untuk analisis citra
+                      penginderaan jauh,
+                      estimasi stok karbon, dan monitoring vegetasi menggunakan Google Earth
+                      Engine.
+                    </p>
+                  </div>
+
+                  <!-- Quick Info -->
+                  <div class="row mt-4">
+                    <div class="col-md-6">
+                      <div class="card border-success">
+                        <div class="card-body">
+                          <h5 class="card-title text-success">
+                            <i class="bi bi-building"></i> Kolaborasi
+                          </h5>
+                          <ul class="list-unstyled mb-0">
+                            <li><i class="bi bi-check-circle-fill text-success"></i>
+                              <strong>Universitas Diponegoro</strong>
+                            </li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i>
+                              <strong>PT LEN Industri (Persero)</strong>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="card border-info">
+                        <div class="card-body">
+                          <h5 class="card-title text-info">
+                            <i class="bi bi-award-fill"></i> Program
+                          </h5>
+                          <p class="mb-0">
+                            <i class="bi bi-check-circle-fill text-info"></i>
+                            <strong>Riset Hilirisasi Program Ajakan Industri</strong>
+                          </p>
+                          <p class="mb-0 mt-2">
+                            <i class="bi bi-patch-check-fill text-success"></i>
+                            Paten Sederhana: <strong>S00202515583</strong>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Key Features -->
+                  <div class="card border-warning mt-4">
+                    <div class="card-header bg-warning">
+                      <h5 class="mb-0"><i class="bi bi-lightning-fill"></i> Fitur Utama</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="col-md-4 mb-3">
+                          <div class="text-center">
+                            <i class="bi bi-tree-fill text-success" style="font-size: 3rem;"></i>
+                            <h6 class="mt-2">Analisis Vegetasi</h6>
+                            <p class="text-muted small">8 indeks vegetasi (NDVI, NDWI,
+                              MNDWI, NDBI, EVI, SAVI, BSI, NDMI)</p>
+                          </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                          <div class="text-center">
+                            <i class="bi bi-map-fill text-primary" style="font-size: 3rem;"></i>
+                            <h6 class="mt-2">Land Cover</h6>
+                            <p class="text-muted small">Dynamic World, ESA WorldCover, ESRI
+                              Land Cover</p>
+                          </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                          <div class="text-center">
+                            <i class="bi bi-graph-up-arrow text-danger" style="font-size: 3rem;"></i>
+                            <h6 class="mt-2">Estimasi Karbon</h6>
+                            <p class="text-muted small">Machine learning dengan validasi
+                              silang untuk akurasi tinggi</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Technology Stack -->
+                  <div class="card border-secondary mt-4">
+                    <div class="card-header">
+                      <h5 class="mb-0"><i class="bi bi-cpu-fill"></i> Teknologi</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="col-md-6">
+                          <h6><i class="bi bi-cloud-fill text-info"></i> Backend & Processing
+                          </h6>
+                          <ul>
+                            <li>Google Earth Engine</li>
+                            <li>Python Flask API</li>
+                            <li>Semi-Supervised UNet (GPU H100)</li>
+                            <li>Scikit-learn (ML Models)</li>
+                          </ul>
+                        </div>
+                        <div class="col-md-6">
+                          <h6><i class="bi bi-display-fill text-primary"></i> Frontend &
+                            Visualization</h6>
+                          <ul>
+                            <li>Bootstrap 5 + Leaflet.js</li>
+                            <li>Chart.js for Analytics</li>
+                            <li>Responsive Web Design</li>
+                            <li>Interactive Mapping</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Quick Links -->
+                  <div class="alert alert-secondary mt-4">
+                    <h6><i class="bi bi-link-45deg"></i> Akses Cepat</h6>
+                    <div class="d-flex gap-2 flex-wrap">
+                      <button class="btn btn-primary" onclick="switchModule('carbon')">
+                        <i class="bi bi-play-fill"></i> Mulai Analisis
+                      </button>
+                      <button class="btn btn-success" onclick="switchModule('guide')">
+                        <i class="bi bi-book-fill"></i> Baca Panduan
+                      </button>
+                      <button class="btn btn-info" onclick="switchModule('details')">
+                        <i class="bi bi-file-text-fill"></i> Detail Program
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Program Details Module (NEW) -->
+      <div class="module-container" id="module-details">
+        <div class="container-fluid mt-4">
+          <div class="row">
+            <div class="col-12">
+              <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                  <h4 class="mb-0"><i class="bi bi-file-text-fill"></i> Detail Program Penelitian</h4>
+                </div>
+                <div class="card-body">
+
+                  <!-- Research Team -->
+                  <div class="card border-primary mb-4">
+                    <div class="card-header bg-primary text-white">
+                      <h5 class="mb-0"><i class="bi bi-people-fill"></i> Tim Peneliti</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="table-responsive">
+                        <table class="table table-hover">
+                          <thead>
+                            <tr>
+                              <th>Nama</th>
+                              <th>Jabatan</th>
+                              <th>Afiliasi</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td><strong>Dr. Eng. Adi Wibowo, S.Si., M.Kom.</strong></td>
+                              <td><span class="badge bg-primary">Ketua Peneliti</span>
+                              </td>
+                              <td>Universitas Diponegoro</td>
+                            </tr>
+                            <tr>
+                              <td>Satriawan Rasyid Purnama, S.Kom., M.Cs.</td>
+                              <td><span class="badge bg-secondary">Anggota Peneliti</span>
+                              </td>
+                              <td>Universitas Diponegoro</td>
+                            </tr>
+                            <tr>
+                              <td>Prof. Dr. Sc. Anindya Wirasatriya, S.T., M.Si., M.Sc.
+                              </td>
+                              <td><span class="badge bg-secondary">Anggota Peneliti</span>
+                              </td>
+                              <td>Universitas Diponegoro</td>
+                            </tr>
+                            <tr>
+                              <td>Dr. Budi Warsito, S.Si., M.Si.</td>
+                              <td><span class="badge bg-secondary">Anggota Peneliti</span>
+                              </td>
+                              <td>Universitas Diponegoro</td>
+                            </tr>
+                            <tr>
+                              <td>Dr. Muhammad Helmi, S.Si., M.Si.</td>
+                              <td><span class="badge bg-secondary">Anggota Peneliti</span>
+                              </td>
+                              <td>Universitas Diponegoro</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Industry Partner -->
+                  <div class="card border-success mb-4">
+                    <div class="card-header bg-success text-white">
+                      <h5 class="mb-0"><i class="bi bi-building-fill"></i> Tim Mitra Industri</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="table-responsive">
+                        <table class="table table-hover">
+                          <thead>
+                            <tr>
+                              <th>Nama</th>
+                              <th>Jabatan</th>
+                              <th>Afiliasi</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td><strong>Prof. Joga Dharma Setiawan, B.Sc., M.Sc.,
+                                  PhD.</strong></td>
+                              <td><span class="badge bg-success">Direktur Utama</span>
+                              </td>
+                              <td>PT LEN Industri (Persero)</td>
+                            </tr>
+                            <tr>
+                              <td>Ilham Nugraha, S.T., M.M., IPM.</td>
+                              <td><span class="badge bg-info">Senior General Manager
+                                  IS</span></td>
+                              <td>PT LEN Industri (Persero)</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Research Output -->
+                  <div class="card border-warning mb-4">
+                    <div class="card-header bg-warning">
+                      <h5 class="mb-0"><i class="bi bi-trophy-fill"></i> Output Penelitian</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="col-md-6 mb-3">
+                          <div class="card border-success">
+                            <div class="card-body">
+                              <h6 class="card-title text-success">
+                                <i class="bi bi-patch-check-fill"></i> Paten Sederhana
+                              </h6>
+                              <p class="mb-1"><strong>Nomor Permohonan:</strong>
+                                S00202515583</p>
+                              <p class="mb-0"><strong>Jenis:</strong> Sistem Estimasi Stok
+                                Karbon Berbasis AI</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <div class="card border-primary">
+                            <div class="card-body">
+                              <h6 class="card-title text-primary">
+                                <i class="bi bi-globe2"></i> Platform Web
+                              </h6>
+                              <p class="mb-1"><strong>URL:</strong> <a href="https://savegeo.len.co.id"
+                                  target="_blank">savegeo.len.co.id</a></p>
+                              <p class="mb-0"><strong>Status:</strong> <span class="badge bg-success">Aktif</span></p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="alert alert-info mt-3">
+                        <h6><i class="bi bi-info-circle-fill"></i> Deskripsi Inovasi</h6>
+                        <p class="mb-0">
+                          Riset ini menghasilkan invensi <strong>sistem estimasi stok karbon
+                            berbasis kecerdasan buatan</strong>
+                          menggunakan citra penginderaan jauh. Inovasi platform web ini
+                          melahirkan
+                          <strong>pemetaan biomassa presisi</strong> dan <strong>pelaporan
+                            transparan</strong>.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Methodology -->
+                  <div class="card border-secondary mb-4">
+                    <div class="card-header bg-secondary text-white">
+                      <h5 class="mb-0"><i class="bi bi-gear-fill"></i> Metodologi Penelitian</h5>
+                    </div>
+                    <div class="card-body">
+                      <h6><i class="bi bi-1-circle-fill text-primary"></i> Akuisisi Data</h6>
+                      <ul>
+                        <li>Citra Sentinel-2 (12 band spektral)</li>
+                        <li>Dataset Dynamic World (Google)</li>
+                        <li>ESA WorldCover dan ESRI Land Cover</li>
+                        <li>API SP3STAB untuk AOI (Area of Interest)</li>
+                      </ul>
+
+                      <h6 class="mt-3"><i class="bi bi-2-circle-fill text-success"></i> Segmentasi
+                        & Preprocessing</h6>
+                      <ul>
+                        <li>Semi-Supervised UNet dengan GPU Server H100</li>
+                        <li>Cloud masking dan filtering</li>
+                        <li>Composite median untuk time series</li>
+                      </ul>
+
+                      <h6 class="mt-3"><i class="bi bi-3-circle-fill text-warning"></i> Estimasi
+                        Biomassa</h6>
+                      <ul>
+                        <li>Robust Linear Regression dari Google Earth Engine</li>
+                        <li>Kalibrasi menggunakan referensi karbon global (WCMC, ESA CCI)</li>
+                        <li>Cross-validation untuk validasi model</li>
+                      </ul>
+
+                      <h6 class="mt-3"><i class="bi bi-4-circle-fill text-danger"></i> Konversi &
+                        Output</h6>
+                      <ul>
+                        <li>Konversi AGB (Above Ground Biomass) ke stok karbon</li>
+                        <li>CO₂ ekuivalen = karbon × 3.67 (IPCC conversion factor)</li>
+                        <li>Visualisasi: Peta densitas karbon (Mg C/ha)</li>
+                        <li>Statistik regional dan insight stok karbon</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <!-- Contribution -->
+                  <!-- <div class="card border-danger mb-4">
+                    <div class="card-header bg-danger text-white">
+                      <h5 class="mb-0"><i class="bi bi-cash-stack"></i> Kontribusi Mitra</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="col-md-6 mb-3">
+                          <div class="card border-primary">
+                            <div class="card-body text-center">
+                              <h6 class="text-primary">Dukungan Natura</h6>
+                              <h3 class="text-primary mb-0">Rp 162.308.750</h3>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <div class="card border-success">
+                            <div class="card-body text-center">
+                              <h6 class="text-success">Dukungan Tunai</h6>
+                              <h3 class="text-success mb-0">Rp 10.000.000</h3>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <h6 class="mt-3"><i class="bi bi-check2-circle"></i> Bentuk Dukungan:</h6>
+                      <ul>
+                        <li><i class="bi bi-check-circle-fill text-success"></i> Processing data
+                          citra satelit backsky</li>
+                        <li><i class="bi bi-check-circle-fill text-success"></i> Server GPU
+                          untuk training model</li>
+                        <li><i class="bi bi-check-circle-fill text-success"></i> Peralatan
+                          pengembangan sistem</li>
+                        <li><i class="bi bi-check-circle-fill text-success"></i> Hotel,
+                          konsumsi, dan uang harian selama di Bandung</li>
+                      </ul>
+                    </div>
+                  </div> -->
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Guide Module (NEW) -->
+      <div class="module-container" id="module-guide">
+        <div class="container-fluid mt-4">
+          <div class="row">
+            <div class="col-12">
+              <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                  <h4 class="mb-0"><i class="bi bi-book-fill"></i> Panduan Lengkap Penggunaan Platform
+                  </h4>
+                </div>
+                <div class="card-body">
+
+                  <!-- Quick Start -->
+                  <div class="alert alert-success">
+                    <h5 class="alert-heading"><i class="bi bi-rocket-takeoff-fill"></i> Memulai
+                      Analisis</h5>
+                    <p class="mb-0">
+                      Platform SAVEGEO memudahkan Anda melakukan analisis geospasial hanya dalam 3
+                      langkah:
+                      <strong>Pilih AOI → Atur Parameter → Jalankan Analisis</strong>
+                    </p>
+                  </div>
+
+                  <!-- Step by Step Guide -->
+                  <div class="accordion" id="guideAccordion">
+
+                    <!-- Step 1: AOI Selection -->
+                    <div class="accordion-item">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                          data-bs-target="#step1">
+                          <i class="bi bi-1-circle-fill text-primary me-2"></i>
+                          <strong>Langkah 1: Memilih Area of Interest (AOI)</strong>
+                        </button>
+                      </h2>
+                      <div id="step1" class="accordion-collapse collapse show" data-bs-parent="#guideAccordion">
+                        <div class="accordion-body">
+                          <p><strong>Ada 3 cara untuk memilih area analisis:</strong></p>
+
+                          <div class="card border-primary mb-3">
+                            <div class="card-header">
+                              <strong><i class="bi bi-flag-fill"></i> Metode A: Indonesia
+                                Admin Boundaries</strong>
+                            </div>
+                            <div class="card-body">
+                              <ol>
+                                <li>Klik tab <strong>"Indonesia Admin"</strong></li>
+                                <li>Pilih <strong>Provinsi</strong> dari dropdown</li>
+                                <li>Pilih <strong>Kota/Kabupaten</strong> (opsional)
+                                </li>
+                                <li>Pilih <strong>Kecamatan</strong> (opsional)</li>
+                                <li>Pilih <strong>Kelurahan/Desa</strong> (opsional)
+                                </li>
+                                <li>Klik tombol <strong>"Load Region"</strong></li>
+                              </ol>
+                              <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle-fill"></i>
+                                <strong>Tips:</strong> Anda bisa memilih hanya sampai
+                                level provinsi dengan klik
+                                "📍 Use Province Only" atau level lainnya sesuai
+                                kebutuhan.
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="card border-success mb-3">
+                            <div class="card-header">
+                              <strong><i class="bi bi-geo-alt-fill"></i> Metode B:
+                                Koordinat + Buffer</strong>
+                            </div>
+                            <div class="card-body">
+                              <ol>
+                                <li>Klik tab <strong>"Coordinates"</strong></li>
+                                <li>Masukkan <strong>Latitude</strong> (contoh: -6.9667)
+                                </li>
+                                <li>Masukkan <strong>Longitude</strong> (contoh:
+                                  110.4167)</li>
+                                <li>Atur <strong>Buffer</strong> dalam kilometer (1-50
+                                  km)</li>
+                                <li>Klik tombol <strong>"Set AOI"</strong></li>
+                              </ol>
+                              <div class="alert alert-warning mb-0">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                <strong>Catatan:</strong> Buffer yang terlalu besar
+                                dapat memperlambat processing.
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="card border-warning mb-0">
+                            <div class="card-header">
+                              <strong><i class="bi bi-pencil-fill"></i> Metode C: Gambar
+                                Manual</strong>
+                            </div>
+                            <div class="card-body">
+                              <ol>
+                                <li>Klik tab <strong>"Draw on Map"</strong></li>
+                                <li>Gunakan tool polygon/rectangle di peta</li>
+                                <li>Gambar area yang diinginkan di peta</li>
+                                <li>Klik tombol <strong>"Use Drawn AOI"</strong></li>
+                              </ol>
+                              <div class="alert alert-success mb-0">
+                                <i class="bi bi-lightbulb-fill"></i>
+                                <strong>Kelebihan:</strong> Metode ini paling fleksibel
+                                untuk area yang spesifik.
+                              </div>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Step 2: Analysis Type -->
+                    <div class="accordion-item">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                          data-bs-target="#step2">
+                          <i class="bi bi-2-circle-fill text-success me-2"></i>
+                          <strong>Langkah 2: Memilih Jenis Analisis</strong>
+                        </button>
+                      </h2>
+                      <div id="step2" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+                        <div class="accordion-body">
+                          <p><strong>Platform menyediakan 4 jenis analisis:</strong></p>
+
+                          <div class="row">
+                            <div class="col-md-6 mb-3">
+                              <div class="card border-success h-100">
+                                <div class="card-body">
+                                  <h6 class="card-title text-success">
+                                    <i class="bi bi-tree-fill"></i> 1. Vegetation
+                                    Indices
+                                  </h6>
+                                  <p class="card-text">
+                                    Analisis 8 indeks vegetasi: NDVI, NDWI, MNDWI,
+                                    NDBI, EVI, SAVI, BSI, NDMI
+                                  </p>
+                                  <strong>Cocok untuk:</strong>
+                                  <ul class="small">
+                                    <li>Monitoring kesehatan vegetasi</li>
+                                    <li>Deteksi stress tanaman</li>
+                                    <li>Monitoring kandungan air</li>
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                              <div class="card border-primary h-100">
+                                <div class="card-body">
+                                  <h6 class="card-title text-primary">
+                                    <i class="bi bi-map-fill"></i> 2. Land Cover
+                                  </h6>
+                                  <p class="card-text">
+                                    Klasifikasi tutupan lahan dari 3 dataset:
+                                    Dynamic World, ESA WorldCover, ESRI
+                                  </p>
+                                  <strong>Cocok untuk:</strong>
+                                  <ul class="small">
+                                    <li>Pemetaan penggunaan lahan</li>
+                                    <li>Monitoring perubahan lahan</li>
+                                    <li>Analisis habitat</li>
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                              <div class="card border-danger h-100">
+                                <div class="card-body">
+                                  <h6 class="card-title text-danger">
+                                    <i class="bi bi-graph-up-arrow"></i> 3. Carbon
+                                    Stock Estimation
+                                  </h6>
+                                  <p class="card-text">
+                                    Estimasi stok karbon menggunakan machine
+                                    learning dan data biomassa
+                                  </p>
+                                  <strong>Cocok untuk:</strong>
+                                  <ul class="small">
+                                    <li>Inventarisasi karbon</li>
+                                    <li>Pelaporan emisi</li>
+                                    <li>Valuasi jasa ekosistem</li>
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                              <div class="card border-warning h-100">
+                                <div class="card-body">
+                                  <h6 class="card-title text-warning">
+                                    <i class="bi bi-layers-fill"></i> 4. Combined
+                                    Analysis
+                                  </h6>
+                                  <p class="card-text">
+                                    Menggabungkan semua analisis dalam satu proses
+                                    (lebih lama)
+                                  </p>
+                                  <strong>Cocok untuk:</strong>
+                                  <ul class="small">
+                                    <li>Laporan komprehensif</li>
+                                    <li>Studi multi-aspek</li>
+                                    <li>Analisis mendalam</li>
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Step 3: Parameters -->
+                    <div class="accordion-item">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                          data-bs-target="#step3">
+                          <i class="bi bi-3-circle-fill text-warning me-2"></i>
+                          <strong>Langkah 3: Mengatur Parameter</strong>
+                        </button>
+                      </h2>
+                      <div id="step3" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+                        <div class="accordion-body">
+
+                          <div class="alert alert-warning">
+                            <i class="bi bi-sliders"></i>
+                            <strong>Parameter berbeda untuk setiap jenis analisis.</strong>
+                            Berikut panduan untuk masing-masing:
+                          </div>
+
+                          <!-- Vegetation Parameters -->
+                          <div class="card border-success mb-3">
+                            <div class="card-header bg-success text-white">
+                              <strong>Parameter untuk Vegetation Indices</strong>
+                            </div>
+                            <div class="card-body">
+                              <table class="table table-sm table-hover">
+                                <thead>
+                                  <tr>
+                                    <th>Parameter</th>
+                                    <th>Deskripsi</th>
+                                    <th>Rekomendasi</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td><strong>Year</strong></td>
+                                    <td>Tahun citra Sentinel-2</td>
+                                    <td>2022-2025 untuk data terbaru</td>
+                                  </tr>
+                                  <tr>
+                                    <td><strong>Month Range</strong></td>
+                                    <td>Rentang bulan untuk analisis</td>
+                                    <td>3-4 bulan untuk composite stabil</td>
+                                  </tr>
+                                  <tr>
+                                    <td><strong>Cloud Threshold</strong></td>
+                                    <td>% awan maksimal</td>
+                                    <td>20-40% untuk area tropis</td>
+                                  </tr>
+                                  <tr>
+                                    <td><strong>Indices Selection</strong></td>
+                                    <td>Pilih indeks yang dibutuhkan</td>
+                                    <td>NDVI wajib, tambahkan sesuai kebutuhan</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+
+                          <!-- Land Cover Parameters -->
+                          <div class="card border-primary mb-3">
+                            <div class="card-header bg-primary text-white">
+                              <strong>Parameter untuk Land Cover</strong>
+                            </div>
+                            <div class="card-body">
+                              <table class="table table-sm table-hover">
+                                <thead>
+                                  <tr>
+                                    <th>Parameter</th>
+                                    <th>Deskripsi</th>
+                                    <th>Rekomendasi</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td><strong>Year</strong></td>
+                                    <td>Tahun dataset</td>
+                                    <td>2021-2023 untuk data terkini</td>
+                                  </tr>
+                                  <tr>
+                                    <td><strong>Datasets</strong></td>
+                                    <td>Pilih 1 atau lebih dataset</td>
+                                    <td>Dynamic World untuk near-realtime</td>
+                                  </tr>
+                                  <tr>
+                                    <td><strong>DW Mode</strong></td>
+                                    <td>Mode untuk Dynamic World</td>
+                                    <td>Mode (paling stabil)</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+
+                          <!-- Carbon Parameters -->
+                          <div class="card border-danger mb-0">
+                            <div class="card-header bg-danger text-white">
+                              <strong>Parameter untuk Carbon Stock Estimation</strong>
+                            </div>
+                            <div class="card-body">
+                              <table class="table table-sm table-hover">
+                                <thead>
+                                  <tr>
+                                    <th>Parameter</th>
+                                    <th>Deskripsi</th>
+                                    <th>Rekomendasi</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td><strong>Reference Dataset</strong></td>
+                                    <td>Dataset biomassa acuan</td>
+                                    <td>ESA CCI (paling akurat)</td>
+                                  </tr>
+                                  <tr>
+                                    <td><strong>Pre-trained Model</strong></td>
+                                    <td>Model ML yang digunakan</td>
+                                    <td>Gunakan default atau pilih model
+                                      GEE-compatible</td>
+                                  </tr>
+                                  <tr>
+                                    <td><strong>Year</strong></td>
+                                    <td>Tahun Sentinel-2</td>
+                                    <td>2022-2024</td>
+                                  </tr>
+                                  <tr>
+                                    <td><strong>Month Range</strong></td>
+                                    <td>Rentang bulan</td>
+                                    <td>Seluruh tahun (Jan-Dec) untuk akurasi
+                                      terbaik</td>
+                                  </tr>
+                                  <tr>
+                                    <td><strong>Cloud Threshold</strong></td>
+                                    <td>% awan maksimal</td>
+                                    <td>10% (lebih ketat untuk carbon)</td>
+                                  </tr>
+                                  <tr>
+                                    <td><strong>Display Mode</strong></td>
+                                    <td>Clipped vs Full Tiles</td>
+                                    <td>Clipped untuk akurasi, Full untuk kecepatan
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Step 4: Run Analysis -->
+                    <div class="accordion-item">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                          data-bs-target="#step4">
+                          <i class="bi bi-4-circle-fill text-danger me-2"></i>
+                          <strong>Langkah 4: Menjalankan dan Membaca Hasil</strong>
+                        </button>
+                      </h2>
+                      <div id="step4" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+                        <div class="accordion-body">
+
+                          <div class="card border-primary mb-3">
+                            <div class="card-header">
+                              <strong><i class="bi bi-play-fill"></i> Menjalankan
+                                Analisis</strong>
+                            </div>
+                            <div class="card-body">
+                              <ol>
+                                <li>Pastikan AOI sudah dipilih (terlihat di peta)</li>
+                                <li>Pastikan parameter sudah diatur</li>
+                                <li>Klik tombol <strong class="text-primary">"Run
+                                    Analysis"</strong></li>
+                                <li>Tunggu proses selesai (1-5 menit tergantung
+                                  kompleksitas)</li>
+                                <li>Loading indicator akan menunjukkan progress</li>
+                              </ol>
+
+                              <div class="alert alert-info">
+                                <i class="bi bi-clock-fill"></i>
+                                <strong>Waktu Processing:</strong>
+                                <ul class="mb-0 mt-2">
+                                  <li>Vegetation: ~30-60 detik</li>
+                                  <li>Land Cover: ~1-2 menit</li>
+                                  <li>Carbon: ~2-5 menit</li>
+                                  <li>Combined: ~5-10 menit</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="card border-success mb-3">
+                            <div class="card-header bg-success text-white">
+                              <strong><i class="bi bi-bar-chart-fill"></i> Membaca Hasil
+                                Analisis</strong>
+                            </div>
+                            <div class="card-body">
+                              <h6><strong>1. Results Map</strong></h6>
+                              <ul>
+                                <li>Tab untuk setiap layer hasil</li>
+                                <li>Peta interaktif dengan zoom/pan</li>
+                                <li>Legend menunjukkan skala nilai</li>
+                              </ul>
+
+                              <h6 class="mt-3"><strong>2. Metrics Cards</strong></h6>
+                              <ul>
+                                <li>Ringkasan nilai utama</li>
+                                <li>Jumlah citra, area total, nilai rata-rata</li>
+                                <li>Badge berwarna untuk interpretasi cepat</li>
+                              </ul>
+
+                              <h6 class="mt-3"><strong>3. Statistics Table</strong></h6>
+                              <ul>
+                                <li>Detail statistik per indeks/kelas</li>
+                                <li>Min, Mean, Max, Std Dev</li>
+                                <li>Deskripsi untuk setiap metrik</li>
+                              </ul>
+
+                              <h6 class="mt-3"><strong>4. Charts & Visualization</strong>
+                              </h6>
+                              <ul>
+                                <li>Bar chart untuk perbandingan</li>
+                                <li>Pie chart untuk distribusi (land cover)</li>
+                                <li>Line chart untuk trend (time series)</li>
+                              </ul>
+
+                              <h6 class="mt-3"><strong>5. Carbon-Specific Results</strong>
+                              </h6>
+                              <ul>
+                                <li><strong>Carbon Density:</strong> Mean, Std Dev, Min,
+                                  Max (Mg/ha)</li>
+                                <li><strong>Total Stock:</strong> Total carbon (tons),
+                                  Area (ha)</li>
+                                <li><strong>CO₂ Equivalent:</strong> Konversi ke CO₂
+                                </li>
+                                <li><strong>Model Performance:</strong> RMSE, R²,
+                                  Validation metrics</li>
+                              </ul>
+                            </div>
+                          </div>
+
+                          <div class="card border-warning mb-0">
+                            <div class="card-header bg-warning">
+                              <strong><i class="bi bi-download"></i> Export Hasil</strong>
+                            </div>
+                            <div class="card-body">
+                              <p><strong>3 cara export hasil:</strong></p>
+                              <div class="row">
+                                <div class="col-md-4">
+                                  <div class="text-center p-3 border rounded">
+                                    <i class="bi bi-file-image text-primary" style="font-size: 2rem;"></i>
+                                    <h6 class="mt-2">Export GeoTIFF</h6>
+                                    <p class="small text-muted">Untuk GIS software
+                                    </p>
+                                  </div>
+                                </div>
+                                <div class="col-md-4">
+                                  <div class="text-center p-3 border rounded">
+                                    <i class="bi bi-file-code text-success" style="font-size: 2rem;"></i>
+                                    <h6 class="mt-2">Download Stats</h6>
+                                    <p class="small text-muted">JSON format</p>
+                                  </div>
+                                </div>
+                                <div class="col-md-4">
+                                  <div class="text-center p-3 border rounded">
+                                    <i class="bi bi-file-text text-danger" style="font-size: 2rem;"></i>
+                                    <h6 class="mt-2">Generate Report</h6>
+                                    <p class="small text-muted">Markdown format</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Tips & Best Practices -->
+                    <div class="accordion-item">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                          data-bs-target="#stepTips">
+                          <i class="bi bi-lightbulb-fill text-warning me-2"></i>
+                          <strong>Tips & Best Practices</strong>
+                        </button>
+                      </h2>
+                      <div id="stepTips" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+                        <div class="accordion-body">
+
+                          <div class="alert alert-success">
+                            <h6><i class="bi bi-check-circle-fill"></i> DO's (Lakukan)</h6>
+                            <ul class="mb-0">
+                              <li>✅ Mulai dengan area kecil untuk testing</li>
+                              <li>✅ Gunakan cloud threshold yang sesuai dengan wilayah
+                              </li>
+                              <li>✅ Pilih periode kering untuk hasil terbaik (carbon)</li>
+                              <li>✅ Save/export hasil untuk dokumentasi</li>
+                              <li>✅ Bandingkan multiple datasets untuk validasi</li>
+                              <li>✅ Perhatikan mode display (Clipped vs Full) untuk carbon
+                              </li>
+                            </ul>
+                          </div>
+
+                          <div class="alert alert-danger">
+                            <h6><i class="bi bi-x-circle-fill"></i> DON'Ts (Hindari)</h6>
+                            <ul class="mb-0">
+                              <li>&#10060; Area terlalu besar (&gt;1000 km²) untuk carbon</li>
+                              <li>&#10060; Cloud threshold terlalu rendah di area tropis</li>
+                              <li>&#10060; Month range terlalu pendek (&lt;3 bulan)</li>
+                              <li>&#10060; Menjalankan multiple analysis bersamaan</li>
+                              <li>&#10060; Menutup browser saat processing</li>
+                            </ul>
+                          </div>
+
+                          <div class="card border-info">
+                            <div class="card-header">
+                              <strong><i class="bi bi-question-circle-fill"></i>
+                                Troubleshooting</strong>
+                            </div>
+                            <div class="card-body">
+                              <table class="table table-sm table-hover">
+                                <thead>
+                                  <tr>
+                                    <th>Problem</th>
+                                    <th>Solution</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td><strong>No images found</strong></td>
+                                    <td>
+                                      • Tingkatkan cloud threshold<br>
+                                      • Perluas month range<br>
+                                      • Coba tahun berbeda
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><strong>Processing timeout</strong></td>
+                                    <td>
+                                      • Kurangi area size<br>
+                                      • Gunakan Full Tiles mode<br>
+                                      • Perpendek month range
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><strong>Empty results</strong></td>
+                                    <td>
+                                      • Pastikan AOI benar<br>
+                                      • Check internet connection<br>
+                                      • Refresh page dan coba lagi
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td><strong>Low accuracy (carbon)</strong></td>
+                                    <td>
+                                      • Gunakan ESA CCI dataset<br>
+                                      • Pilih pre-trained model<br>
+                                      • Gunakan longer time period
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+
+                          <div class="alert alert-primary mt-3">
+                            <h6><i class="bi bi-book"></i> Referensi & Learning</h6>
+                            <ul class="mb-0">
+                              <li><strong>Google Earth Engine Docs:</strong> <a
+                                  href="https://developers.google.com/earth-engine"
+                                  target="_blank">developers.google.com/earth-engine</a>
+                              </li>
+                              <li><strong>Sentinel-2 Info:</strong> <a
+                                  href="https://sentinel.esa.int/web/sentinel/missions/sentinel-2"
+                                  target="_blank">sentinel.esa.int</a></li>
+                              <li><strong>Dynamic World:</strong> <a href="https://dynamicworld.app/"
+                                  target="_blank">dynamicworld.app</a></li>
+                              <li><strong>Carbon Stock Methodology:</strong> IPCC
+                                Guidelines</li>
+                            </ul>
+                          </div>
+
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <!-- Quick Reference Card -->
+                  <div class="card border-secondary mt-4">
+                    <div class="card-header">
+                      <h5 class="mb-0"><i class="bi bi-bookmark-fill"></i> Quick Reference</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="col-md-6">
+                          <h6><i class="bi bi-keyboard"></i> Keyboard Shortcuts</h6>
+                          <table class="table table-sm table-hover">
+                            <tbody>
+                              <tr>
+                                <td><code>Ctrl + Z</code></td>
+                                <td>Undo drawing</td>
+                              </tr>
+                              <tr>
+                                <td><code>Escape</code></td>
+                                <td>Cancel drawing</td>
+                              </tr>
+                              <tr>
+                                <td><code>+/-</code></td>
+                                <td>Zoom in/out map</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                        <div class="col-md-6">
+                          <h6><i class="bi bi-lightning-fill"></i> Quick Actions</h6>
+                          <div class="d-grid gap-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="switchModule('carbon')">
+                              <i class="bi bi-play"></i> Go to Analysis
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="switchModule('about')">
+                              <i class="bi bi-info-circle"></i> About Program
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" onclick="switchModule('details')">
+                              <i class="bi bi-file-text"></i> Program Details
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               </div>
             </div>
@@ -810,7 +1946,8 @@
     // Configuration - will be replaced by Vite during build
     const config = {
       api: {
-        baseUrl: 'https://backend.geomoka.husnifd.my.id/api'  // Will be replaced by Vite
+        //baseUrl: 'https://backend.geomoka.husnifd.my.id/api'  // Will be replaced by Vite
+        baseUrl: 'http://localhost:5000/api'  // Will be replaced by Vite
       },
       env: 'development',
       appTitle: 'GEOSAVE'
