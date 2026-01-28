@@ -2151,7 +2151,7 @@
       }
 
       async getModelInfo(modelName) {
-        return await this.request(`/models/info/${modelName}`);
+        return await this.request(`/models/info/${encodeURIComponent(modelName)}`);
       }
 
       async getProvinces() {
@@ -2695,11 +2695,11 @@
             const $optgroup = $('<optgroup>').attr('label', algo.toUpperCase());
 
             modelList
-              .sort((a, b) => new Date(b.trained_at) - new Date(a.trained_at))
+              .sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at))
               .forEach(model => {
-                const date = new Date(model.trained_at).toLocaleDateString();
-                const r2 = model.cv_metrics?.r2_mean
-                  ? ` (R²: ${model.cv_metrics.r2_mean.toFixed(3)})`
+                const date = new Date(model.registered_at).toLocaleDateString();
+                const r2 = (model.r2 !== undefined && model.r2 !== null)
+                  ? ` (R²: ${Number(model.r2).toFixed(3)})`
                   : '';
 
                 $optgroup.append(
