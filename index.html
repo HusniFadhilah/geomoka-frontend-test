@@ -390,8 +390,8 @@
                 <!-- Year -->
                 <div class="mb-3">
                   <label class="form-label">Year</label>
-                  <input type="range" class="form-range" id="yearSlider" min="2017" max="2025" value="2022">
-                  <div class="text-center"><strong id="yearValue">2022</strong></div>
+                  <input type="range" class="form-range" id="yearSlider" min="2017">
+                  <div class="text-center"><strong id="yearValue"></strong></div>
                 </div>
 
                 <!-- Zoom -->
@@ -498,6 +498,45 @@
                       <option value="hillshade">Hillshade</option>
                       <option value="probability">Probability</option>
                     </select>
+                  </div>
+
+                  <!-- ✅ TAMBAHKAN BLOK INI -->
+                  <div class="mb-3">
+                    <label class="form-label">Month Range (Dynamic World)</label>
+                    <div class="d-flex gap-2">
+                      <select class="form-select" id="lcStartMonth">
+                        <option value="1">Jan</option>
+                        <option value="2">Feb</option>
+                        <option value="3">Mar</option>
+                        <option value="4">Apr</option>
+                        <option value="5">May</option>
+                        <option value="6">Jun</option>
+                        <option value="7">Jul</option>
+                        <option value="8">Aug</option>
+                        <option value="9">Sep</option>
+                        <option value="10">Oct</option>
+                        <option value="11">Nov</option>
+                        <option value="12">Dec</option>
+                      </select>
+
+                      <span class="align-self-center">to</span>
+
+                      <select class="form-select" id="lcEndMonth">
+                        <option value="1">Jan</option>
+                        <option value="2">Feb</option>
+                        <option value="3">Mar</option>
+                        <option value="4">Apr</option>
+                        <option value="5">May</option>
+                        <option value="6">Jun</option>
+                        <option value="7">Jul</option>
+                        <option value="8">Aug</option>
+                        <option value="9">Sep</option>
+                        <option value="10">Oct</option>
+                        <option value="11">Nov</option>
+                        <option value="12">Dec</option>
+                      </select>
+                    </div>
+                    <small class="text-muted">Hanya berlaku untuk Dynamic World</small>
                   </div>
                 </div>
 
@@ -2911,18 +2950,38 @@
 
       setTimeout(() => {
         const bufferDeg = buffer / 111;
-        const bounds = [
+
+        // Koordinat polygon (searah jarum jam, closed ring)
+        const coords = [
+          [lon - bufferDeg, lat - bufferDeg],
+          [lon + bufferDeg, lat - bufferDeg],
+          [lon + bufferDeg, lat + bufferDeg],
+          [lon - bufferDeg, lat + bufferDeg],
+          [lon - bufferDeg, lat - bufferDeg],  // tutup ring
+        ];
+
+        // ✅ GeoJSON Polygon untuk dikirim ke backend
+        const geojson = {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: [coords],
+          },
+          properties: {},
+        };
+
+        // Leaflet polygon — lat/lon order (dibalik dari GeoJSON)
+        const leafletBounds = [
           [lat - bufferDeg, lon - bufferDeg],
           [lat - bufferDeg, lon + bufferDeg],
           [lat + bufferDeg, lon + bufferDeg],
           [lat + bufferDeg, lon - bufferDeg],
-          [lat - bufferDeg, lon - bufferDeg]
+          [lat - bufferDeg, lon - bufferDeg],
         ];
 
         drawnItems.clearLayers();
-        const polygon = L.polygon(bounds, { color: 'green', fillOpacity: 0.3 });
+        const polygon = L.polygon(leafletBounds, { color: 'green', fillOpacity: 0.3 });
         drawnItems.addLayer(polygon);
-
         L.marker([lat, lon]).addTo(drawnItems);
 
         map.setView([lat, lon], parseInt($('#zoomValue').text()));
@@ -2931,33 +2990,46 @@
           type: 'coordinate',
           name: `Point (${lat.toFixed(4)}, ${lon.toFixed(4)})`,
           geometry: polygon.getBounds(),
-          area: calculateAreaFromBounds(polygon.getBounds())
+          area: calculateAreaFromBounds(polygon.getBounds()),
+          geojson: geojson,  // ✅ GeoJSON persegi untuk clipping di backend
         };
 
         showAOIInfo();
         hideLoading();
         showAlert('AOI set successfully!', 'success');
+        console.log('✓ Coordinate AOI set with GeoJSON:', geojson);
       }, 500);
     }
 
     function useDrawnPolygon() {
-      if (drawnItems.getLayers().length === 0) {
+      const layers = drawnItems.getLayers();
+
+      if (layers.length === 0) {
         showAlert('Please draw a polygon on the map first', 'warning');
         return;
       }
 
-      const layer = drawnItems.getLayers()[0];
+      const layer = layers[0];
       const bounds = layer.getBounds();
+
+      // ✅ Ekstrak GeoJSON dari layer yang digambar
+      // layer.toGeoJSON() mengembalikan Feature dengan geometry Polygon/Rectangle
+      const geojson = layer.toGeoJSON();
+
+      // Hitung area dari GeoJSON (lebih akurat untuk polygon tidak persegi)
+      const area = calculateAreaFromBounds(bounds);
 
       currentAOI = {
         type: 'drawn',
         name: 'Custom Polygon',
-        geometry: bounds,
-        area: calculateAreaFromBounds(bounds)
+        geometry: bounds,       // tetap disimpan untuk map.fitBounds / center
+        area: area,
+        geojson: geojson,      // ✅ GeoJSON asli untuk dikirim ke backend (akan di-clip)
       };
 
       showAOIInfo();
-      showAlert('Custom polygon set as AOI!', 'success');
+      showAlert('Custom polygon set as AOI! Area will be clipped to your drawn shape.', 'success');
+      console.log('✓ Drawn AOI set with GeoJSON:', geojson);
     }
 
     function calculateAreaFromBounds(bounds) {
@@ -2983,97 +3055,69 @@
 
       const analysisType = $('#analysisType').val();
       analysisResults = {};
-      processTimers = {}; // Reset timers
+      processTimers = {};
+
+      // Objek khusus untuk waktu proses — TIDAK bercampur dengan data analisis
+      analysisResults._processingTimes = {};
 
       try {
-        console.log('Starting analysis type:', analysisType);
         const totalStartTime = Date.now();
 
-        // Run vegetation analysis
+        // ── Vegetation ──────────────────────────────────────────
         if (analysisType === 'vegetation' || analysisType === 'combined') {
-          showLoading('Analyzing vegetation indices...', 'Processing Sentinel-2 imagery from Google Earth Engine', 20);
-          const vegStartTime = Date.now();
-
+          showLoading('Analyzing vegetation indices...', 'Processing Sentinel-2 imagery…', 20);
+          const t0 = Date.now();
           const vegData = await runVegetationAnalysis();
+          const dur = ((Date.now() - t0) / 1000).toFixed(2);
 
-          const vegDuration = ((Date.now() - vegStartTime) / 1000).toFixed(2);
-          processTimers.vegetation = vegDuration;
-          console.log(`✓ Vegetation analysis completed in ${vegDuration}s`);
-
+          processTimers.vegetation = dur;
           if (vegData) {
-            analysisResults.vegetation = vegData;
-            analysisResults.vegetation.processing_time = vegDuration;
+            analysisResults.vegetation = vegData;               // data bersih
+            analysisResults._processingTimes.vegetation = dur;  // waktu terpisah
           }
         }
 
-        // Run land cover analysis
+        // ── Land Cover ───────────────────────────────────────────
         if (analysisType === 'landcover' || analysisType === 'combined') {
-          showLoading('Analyzing land cover...', 'Processing land cover datasets from Google Earth Engine', 60);
-          const lcStartTime = Date.now();
-
+          showLoading('Analyzing land cover...', 'Processing land cover datasets…', 60);
+          const t0 = Date.now();
           const lcData = await runLandCoverAnalysis();
-          console.log('Land cover analysis returned:', lcData); // ✅ ADD THIS
+          const dur = ((Date.now() - t0) / 1000).toFixed(2);
 
-          const lcDuration = ((Date.now() - lcStartTime) / 1000).toFixed(2);
-          processTimers.landcover = lcDuration;
-          console.log(`✓ Land cover analysis completed in ${lcDuration}s`);
-
+          processTimers.landcover = dur;
           if (lcData) {
+            // ✅ FIX: simpan data langsung, JANGAN tambahkan processing_time ke sini
             analysisResults.landcover = lcData;
-            analysisResults.landcover.processing_time = lcDuration;
-
-            // ✅ Debug specific datasets
-            if (lcData.ESA_WorldCover) {
-              console.log('ESA WorldCover data received:', {
-                hasTileUrl: !!lcData.ESA_WorldCover.tile_url,
-                hasClasses: !!lcData.ESA_WorldCover.classes,
-                classCount: lcData.ESA_WorldCover.classes ? Object.keys(lcData.ESA_WorldCover.classes).length : 0,
-                tileUrl: lcData.ESA_WorldCover.tile_url?.substring(0, 100)
-              });
-            }
+            analysisResults._processingTimes.landcover = dur;
           }
         }
 
-        // Run carbon analysis
+        // ── Carbon ──────────────────────────────────────────────
         if (analysisType === 'carbon' || analysisType === 'combined') {
-          showLoading('Estimating carbon stock...', 'Building regression model from Sentinel-2 and biomass data', 40);
-          const carbonStartTime = Date.now();
-
+          showLoading('Estimating carbon stock...', 'Building regression model…', 40);
+          const t0 = Date.now();
           const carbonData = await runCarbonAnalysis();
+          const dur = ((Date.now() - t0) / 1000).toFixed(2);
 
-          const carbonDuration = ((Date.now() - carbonStartTime) / 1000).toFixed(2);
-          processTimers.carbon = carbonDuration;
-          console.log(`✓ Carbon analysis completed in ${carbonDuration}s`);
-
+          processTimers.carbon = dur;
           if (carbonData) {
             analysisResults.carbon = carbonData;
-            analysisResults.carbon.processing_time = carbonDuration;
+            analysisResults._processingTimes.carbon = dur;
           }
         }
 
         const totalDuration = ((Date.now() - totalStartTime) / 1000).toFixed(2);
         processTimers.total = totalDuration;
+        analysisResults._processingTimes.total = totalDuration;
 
         hideLoading();
-
         console.log('Analysis results:', analysisResults);
         console.log('Processing times:', processTimers);
 
-        // Display results if we have any
-        if (Object.keys(analysisResults).length > 0) {
+        if (Object.keys(analysisResults).filter(k => !k.startsWith('_')).length > 0) {
           displayResults();
-
-          // Show success message with total duration
-          showAlert(
-            `Analysis completed successfully in ${formatDuration(totalDuration)}!`,
-            'success',
-            5000
-          );
-
-          // Scroll to results
-          $('html, body').animate({
-            scrollTop: $('#resultsSection').offset().top - 100
-          }, 500);
+          showAlert(`Analysis completed in ${formatDuration(totalDuration)}!`, 'success', 5000);
+          $('html, body').animate({ scrollTop: $('#resultsSection').offset().top - 100 }, 500);
         } else {
           showAlert('No analysis results available', 'warning');
         }
@@ -3081,7 +3125,7 @@
       } catch (error) {
         hideLoading();
         console.error('Analysis error:', error);
-        showAlert('An error occurred during analysis: ' + error.message, 'danger');
+        showAlert('Error during analysis: ' + error.message, 'danger');
       }
     }
 
@@ -3133,7 +3177,10 @@
         },
         year: parseInt($('#yearValue').text()),
         datasets,
-        dw_mode: $('#dwMode').val()
+        dw_mode: $('#dwMode').val(),
+
+        start_month: parseInt($('#lcStartMonth').val()),
+        end_month: parseInt($('#lcEndMonth').val()),
       };
 
       console.log('Land cover analysis params:', params);
@@ -3288,135 +3335,114 @@
       try {
         $('#resultsSection').slideDown();
 
-        createResultTabs();
+        createResultTabs();     // sudah difix di atas
         initializeResultMap();
 
-        // ✅ Wrap statistics display in try-catch
         try {
           displayStatistics();
-        } catch (error) {
-          console.error('Error displaying statistics:', error);
-          showAlert('Warning: Some statistics could not be displayed. Check console for details.', 'warning');
+        } catch (e) {
+          console.error('Statistics display error:', e);
+          showAlert('Warning: Some statistics could not be displayed.', 'warning');
         }
 
-        $('#vegCharts').toggle(!!(analysisResults.vegetation && analysisResults.vegetation.indices));
+        $('#vegCharts').toggle(!!(analysisResults.vegetation?.indices));
         createCharts();
 
-        // Display land cover stats for both datasets if available
-        let hasLandCover = false;
+        // ── Land cover stats ─────────────────────────────────────
+        let hasLC = false;
+        const LC_DATASETS = {
+          Dynamic_World: { tableId: 'lcTableDW', chartId: 'lcPieDW', sectionId: 'lcDynamicWorld', label: 'Dynamic World' },
+          ESA_WorldCover: { tableId: 'lcTableESA', chartId: 'lcPieESA', sectionId: 'lcESAWorldCover', label: 'ESA WorldCover' },
+          ESRI_LandCover: { tableId: 'lcTableESRI', chartId: 'lcPieESRI', sectionId: 'lcESRILandCover', label: 'ESRI Land Cover' },
+        };
 
-        if (analysisResults.landcover?.Dynamic_World?.classes) {
-          if (renderLandCoverTableAndChart('Dynamic_World', 'Dynamic World')) {
-            hasLandCover = true;
+        for (const [key, cfg] of Object.entries(LC_DATASETS)) {
+          const data = analysisResults.landcover?.[key];
+          if (data?.classes) {
+            if (renderLandCoverTableAndChart(key, cfg.label)) hasLC = true;
           }
         }
 
-        if (analysisResults.landcover?.ESA_WorldCover?.classes) {
-          if (renderLandCoverTableAndChart('ESA_WorldCover', 'ESA WorldCover')) {
-            hasLandCover = true;
-          }
-        }
+        $('#landcoverStats').toggle(hasLC);
 
-        if (analysisResults.landcover?.ESRI_LandCover?.classes) {
-          if (renderLandCoverTableAndChart('ESRI_LandCover', 'ESRI Land Cover')) {
-            hasLandCover = true;
-          }
-        }
-
-        if (hasLandCover) {
-          $('#landcoverStats').show();
-        } else {
-          $('#landcoverStats').hide();
-        }
+        // ── Processing times widget ──────────────────────────────
+        displayProcessingTimes();
 
         console.log('✓ Results displayed');
       } catch (error) {
-        console.error('Error in displayResults:', error);
+        console.error('displayResults error:', error);
         showAlert('Error displaying results: ' + error.message, 'danger');
       }
+    }
+
+    // Key yang BUKAN dataset dan harus dilewati
+    const NON_DATASET_KEYS = new Set(['processing_time', 'total_area_ha', 'resolution']);
+
+    function isDatasetEntry(key, value) {
+      if (NON_DATASET_KEYS.has(key)) return false;
+      if (key.startsWith('_')) return false;                      // private keys
+      if (typeof value !== 'object' || value === null) return false;
+      return ('tile_url' in value) || ('classes' in value) || ('indices' in value);
     }
 
     function createResultTabs() {
       const tabsHtml = [];
       let isFirst = true;
 
+      // ── Vegetation ─────────────────────────────────────────────
       if (analysisResults.vegetation) {
         if (analysisResults.vegetation.rgb_tile_url) {
-          tabsHtml.push(`
-        <li class="nav-item">
-          <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="rgb">
-            <i class="fas fa-image"></i> RGB
-          </button>
-        </li>
-      `);
+          tabsHtml.push(makeTab('rgb', '<i class="fas fa-image"></i> RGB', isFirst));
           isFirst = false;
         }
-
-        for (const index in analysisResults.vegetation.indices) {
-          tabsHtml.push(`
-        <li class="nav-item">
-          <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="${index}">
-            <i class="fas fa-leaf"></i> ${index}
-          </button>
-        </li>
-      `);
+        for (const index in (analysisResults.vegetation.indices || {})) {
+          tabsHtml.push(makeTab(index, `<i class="fas fa-leaf"></i> ${index}`, isFirst));
           isFirst = false;
         }
       }
 
-      // Land cover tabs - DENGAN LOGGING
+      // ── Land Cover ─────────────────────────────────────────────
       if (analysisResults.landcover) {
-        console.log('Land cover datasets:', Object.keys(analysisResults.landcover));
-
         for (const dataset in analysisResults.landcover) {
-          const data = analysisResults.landcover[dataset];
-          console.log(`Processing tab for ${dataset}:`, {
-            hasTileUrl: !!data.tile_url,
-            hasClasses: !!data.classes,
-            classCount: data.classes ? Object.keys(data.classes).length : 0
-          });
+          const val = analysisResults.landcover[dataset];
 
-          // ✅ ALWAYS CREATE TAB if dataset exists
-          tabsHtml.push(`
-        <li class="nav-item">
-          <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="${dataset}">
-            <i class="fas fa-map"></i> ${dataset.replace(/_/g, ' ')}
-          </button>
-        </li>
-      `);
+          // ✅ FIX: lewati key yang bukan dataset
+          if (!isDatasetEntry(dataset, val)) {
+            console.log(`Skipping non-dataset key: "${dataset}"`);
+            continue;
+          }
+
+          const label = dataset.replace(/_/g, ' ');
+          tabsHtml.push(makeTab(dataset, `<i class="fas fa-map"></i> ${label}`, isFirst));
           isFirst = false;
         }
       }
 
-      // Carbon tabs
+      // ── Carbon ─────────────────────────────────────────────────
       if (analysisResults.carbon) {
-        tabsHtml.push(`
-      <li class="nav-item">
-        <button class="nav-link ${isFirst ? 'active' : ''}" data-bs-toggle="tab" data-layer="carbon_estimated">
-          <i class="fas fa-tree"></i> Carbon Stock
-        </button>
-      </li>
-    `);
+        tabsHtml.push(makeTab('carbon_estimated', '<i class="fas fa-tree"></i> Carbon Stock', isFirst));
+        isFirst = false;
 
         if ($('#showReference').is(':checked') && analysisResults.carbon.carbon_reference) {
-          tabsHtml.push(`
-        <li class="nav-item">
-          <button class="nav-link" data-bs-toggle="tab" data-layer="carbon_reference">
-            <i class="fas fa-database"></i> Reference Carbon
-          </button>
-        </li>
-      `);
+          tabsHtml.push(makeTab('carbon_reference', '<i class="fas fa-database"></i> Reference Carbon', false));
         }
-
-        isFirst = false;
       }
 
       $('#resultTabs').html(tabsHtml.join(''));
-
       $('#resultTabs button').on('click', function () {
-        const layer = $(this).data('layer');
-        switchResultLayer(layer);
+        switchResultLayer($(this).data('layer'));
       });
+    }
+
+    function makeTab(layerKey, labelHtml, active) {
+      return `
+    <li class="nav-item">
+      <button class="nav-link ${active ? 'active' : ''}"
+              data-bs-toggle="tab"
+              data-layer="${layerKey}">
+        ${labelHtml}
+      </button>
+    </li>`;
     }
 
     function initializeResultMap() {
@@ -3551,69 +3577,43 @@
     }
 
     function displayProcessingTimes() {
-      let timesHtml = '<div class="card mt-3"><div class="card-header"><i class="fas fa-clock"></i> Processing Times</div><div class="card-body"><div class="row">';
+      const times = analysisResults._processingTimes || processTimers;
 
-      // Vegetation time
-      if (processTimers.vegetation) {
-        timesHtml += `
-            <div class="col-md-3">
-                <div class="text-center p-2">
-                    <i class="fas fa-leaf text-success" style="font-size: 24px;"></i>
-                    <h5 class="mt-2 mb-0">${formatDuration(processTimers.vegetation)}</h5>
-                    <small class="text-muted">Vegetation Analysis</small>
-                </div>
-            </div>
-        `;
-      }
+      const sections = [
+        { key: 'vegetation', icon: 'fa-leaf', color: 'success', label: 'Vegetation' },
+        { key: 'landcover', icon: 'fa-map', color: 'info', label: 'Land Cover' },
+        { key: 'carbon', icon: 'fa-tree', color: 'warning', label: 'Carbon' },
+        { key: 'total', icon: 'fa-stopwatch', color: 'primary', label: 'Total Time' },
+      ];
 
-      // Land cover time
-      if (processTimers.landcover) {
-        timesHtml += `
-            <div class="col-md-3">
-                <div class="text-center p-2">
-                    <i class="fas fa-map text-info" style="font-size: 24px;"></i>
-                    <h5 class="mt-2 mb-0">${formatDuration(processTimers.landcover)}</h5>
-                    <small class="text-muted">Land Cover Analysis</small>
-                </div>
-            </div>
-        `;
-      }
+      const cols = sections
+        .filter(s => times[s.key])
+        .map(s => `
+      <div class="col">
+        <div class="text-center p-2">
+          <i class="fas ${s.icon} text-${s.color}" style="font-size:24px;"></i>
+          <h5 class="mt-2 mb-0">${formatDuration(times[s.key])}</h5>
+          <small class="text-muted">${s.label}</small>
+        </div>
+      </div>`)
+        .join('');
 
-      // Carbon time
-      if (processTimers.carbon) {
-        timesHtml += `
-            <div class="col-md-3">
-                <div class="text-center p-2">
-                    <i class="fas fa-tree text-success" style="font-size: 24px;"></i>
-                    <h5 class="mt-2 mb-0">${formatDuration(processTimers.carbon)}</h5>
-                    <small class="text-muted">Carbon Analysis</small>
-                </div>
-            </div>
-        `;
-      }
+      if (!cols) return;   // tidak ada waktu yang direkam
 
-      // Total time
-      if (processTimers.total) {
-        timesHtml += `
-            <div class="col-md-3">
-                <div class="text-center p-2">
-                    <i class="fas fa-stopwatch text-primary" style="font-size: 24px;"></i>
-                    <h5 class="mt-2 mb-0">${formatDuration(processTimers.total)}</h5>
-                    <small class="text-muted">Total Time</small>
-                </div>
-            </div>
-        `;
-      }
+      const html = `
+    <div class="card mt-3" id="processingTimesCard">
+      <div class="card-header">
+        <i class="fas fa-clock"></i> Processing Times
+      </div>
+      <div class="card-body">
+        <div class="row row-cols-2 row-cols-md-4 g-2">${cols}</div>
+      </div>
+    </div>`;
 
-      timesHtml += '</div></div></div>';
-
-      // Insert before stats table or after metrics
-      if ($('#processingTimes').length) {
-        $('#processingTimes').replaceWith(timesHtml);
-      } else {
-        $(timesHtml).attr('id', 'processingTimes').insertAfter('#metricsContainer');
-      }
+      $('#processingTimesCard').remove();
+      $(html).insertAfter('#metricsContainer');
     }
+
 
     function displayCarbonStats() {
       const carbonData = analysisResults.carbon;
@@ -4375,34 +4375,250 @@
     // EXPORT FUNCTIONS
     // ==========================================
     async function exportToGoogleDrive() {
-      if (!analysisResults.vegetation && !analysisResults.landcover) {
-        showAlert('No analysis results to export', 'warning');
+      if (!currentAOI) {
+        showAlert('Please select an AOI first', 'warning');
         return;
       }
 
-      showLoading('Exporting to Google Drive...', 'Creating export task');
+      const hasResults = analysisResults.vegetation || analysisResults.landcover || analysisResults.carbon;
+      if (!hasResults) {
+        showAlert('Run an analysis first before exporting', 'warning');
+        return;
+      }
 
-      const params = {
-        aoi: {
+      // ── Tentukan layer & parameter berdasarkan analisis yang sudah dijalankan ──
+      const analysisType = $('#analysisType').val();
+      let layer_type, index_name, dataset, scale;
+
+      if (analysisType === 'carbon' && analysisResults.carbon) {
+        layer_type = 'carbon';
+        scale = parseInt(analysisResults.carbon?.model_info?.scale || 250);
+      } else if (analysisType === 'landcover' && analysisResults.landcover) {
+        layer_type = 'landcover';
+        // Ambil dataset pertama yang tersedia
+        dataset = Object.keys(analysisResults.landcover)[0] || 'Dynamic_World';
+        scale = 10;
+      } else if (analysisType === 'vegetation' && analysisResults.vegetation) {
+        layer_type = 'vegetation';
+        // Ambil indeks pertama yang aktif
+        index_name = Object.keys(analysisResults.vegetation.indices || {})[0] || 'NDVI';
+        scale = 20;
+      } else if (analysisType === 'combined') {
+        // Prioritas: carbon → vegetation → landcover
+        if (analysisResults.carbon) { layer_type = 'carbon'; scale = 250; }
+        else if (analysisResults.vegetation) { layer_type = 'vegetation'; index_name = 'NDVI'; scale = 20; }
+        else { layer_type = 'landcover'; dataset = 'Dynamic_World'; scale = 10; }
+      } else {
+        showAlert('No matching analysis results found for export', 'warning');
+        return;
+      }
+
+      // ── Biarkan user memilih layer & scale melalui modal sederhana ──────────
+      const confirmed = await showExportDialog({ layer_type, index_name, dataset, scale });
+      if (!confirmed) return;  // user cancel
+
+      layer_type = confirmed.layer_type;
+      index_name = confirmed.index_name;
+      dataset = confirmed.dataset;
+      scale = confirmed.scale;
+
+      showLoading('Generating GeoTIFF...', 'Requesting download URL from Earth Engine');
+
+      const aoi = currentAOI.geojson
+        ? { geojson: currentAOI.geojson }
+        : {
           west: currentAOI.geometry.getWest(),
           south: currentAOI.geometry.getSouth(),
           east: currentAOI.geometry.getEast(),
           north: currentAOI.geometry.getNorth()
-        },
-        layer_type: 'vegetation',
-        layer_name: 'NDVI',
-        description: `export_${currentAOI.name.replace(/\s+/g, '_')}_${Date.now()}`
+        };
+
+      const params = {
+        aoi,
+        layer_type,
+        index_name,
+        dataset,
+        scale,
+        year: parseInt($('#yearValue').text()),
+        start_month: parseInt(layer_type === 'carbon' ? $('#carbonStartMonth').val() : $('#startMonth').val()),
+        end_month: parseInt(layer_type === 'carbon' ? $('#carbonEndMonth').val() : $('#endMonth').val()),
+        cloud_threshold: parseInt(layer_type === 'carbon' ? $('#carbonCloudValue').text() : $('#cloudValue').text()),
+        model_name: layer_type === 'carbon' ? ($('#carbonModelSelect').val() || null) : null,
+        filename: `savegeo_${currentAOI.name.replace(/\s+/g, '_')}_${layer_type}_${$('#yearValue').text()}`
       };
 
-      const response = await apiClient.exportToDrive(params);
+      try {
+        const response = await apiClient.request('/download/geotiff', {
+          method: 'POST',
+          data: params
+        });
 
-      hideLoading();
+        hideLoading();
 
-      if (response.success) {
-        showAlert('Export task created! Check your Google Earth Engine Tasks.', 'success');
-      } else {
-        showAlert('Export failed: ' + response.error, 'danger');
+        if (response.success && response.data.download_url) {
+          // ── Trigger download langsung ────────────────────────
+          const url = response.data.download_url;
+          const filename = response.data.filename || 'savegeo_export.tif';
+
+          showAlert(
+            `✅ GeoTIFF siap! Download akan dimulai otomatis. ` +
+            `<a href="${url}" download="${filename}" target="_blank">Klik di sini</a> jika tidak otomatis.`,
+            'success', 10000
+          );
+
+          // Buat link tersembunyi lalu klik
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+
+        } else {
+          const errMsg = response.data?.error || response.error || 'Unknown error';
+          const suggestion = response.data?.suggestion || '';
+          showAlert(`Export failed: ${errMsg}${suggestion ? '<br><small>' + suggestion + '</small>' : ''}`, 'danger', 8000);
+        }
+
+      } catch (error) {
+        hideLoading();
+        showAlert('Export error: ' + error.message, 'danger');
       }
+    }
+
+    function showExportDialog({ layer_type, index_name, dataset, scale }) {
+      return new Promise((resolve) => {
+
+        // Opsi layer berdasarkan hasil analisis yang tersedia
+        let layerOptions = '';
+        if (analysisResults.vegetation?.indices) {
+          for (const idx of Object.keys(analysisResults.vegetation.indices)) {
+            layerOptions += `<option value="vegetation|${idx}" ${layer_type === 'vegetation' && index_name === idx ? 'selected' : ''}>
+                    Vegetation – ${idx}</option>`;
+          }
+          layerOptions += `<option value="rgb|" ${layer_type === 'rgb' ? 'selected' : ''}>RGB Composite</option>`;
+        }
+        if (analysisResults.landcover) {
+          for (const ds of Object.keys(analysisResults.landcover)) {
+            layerOptions += `<option value="landcover|${ds}" ${layer_type === 'landcover' && dataset === ds ? 'selected' : ''}>
+                    Land Cover – ${ds.replace(/_/g, ' ')}</option>`;
+          }
+        }
+        if (analysisResults.carbon) {
+          layerOptions += `<option value="carbon|" ${layer_type === 'carbon' ? 'selected' : ''}>Carbon Stock</option>`;
+        }
+
+        const modalHtml = `
+        <div class="modal fade" id="exportModal" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-file-image"></i> Export GeoTIFF</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="alert alert-info">
+                  <i class="fas fa-info-circle"></i>
+                  File GeoTIFF akan diunduh langsung. Ukuran area besar memerlukan scale lebih besar.
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label"><strong>Layer yang diexport</strong></label>
+                  <select class="form-select" id="exportLayerSelect">${layerOptions}</select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">
+                    <strong>Resolusi / Scale (meter/pixel)</strong>
+                    <small class="text-muted ms-1">— semakin kecil, file semakin besar</small>
+                  </label>
+                  <select class="form-select" id="exportScaleSelect">
+                    <option value="10"  ${scale === 10 ? 'selected' : ''}>10m  (Sentinel-2 native, area kecil)</option>
+                    <option value="20"  ${scale === 20 ? 'selected' : ''}>20m  (Direkomendasikan untuk vegetasi)</option>
+                    <option value="30"  ${scale === 30 ? 'selected' : ''}>30m</option>
+                    <option value="100" ${scale === 100 ? 'selected' : ''}>100m (Untuk area besar)</option>
+                    <option value="250" ${scale === 250 ? 'selected' : ''}>250m (Carbon / area sangat besar)</option>
+                    <option value="500" ${scale === 500 ? 'selected' : ''}>500m</option>
+                  </select>
+                </div>
+
+                <div class="alert alert-warning mb-0">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <strong>Batasan GEE:</strong> Jika area terlalu besar, coba naikkan scale atau perkecil AOI.
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="exportCancelBtn">Batal</button>
+                <button type="button" class="btn btn-primary" id="exportConfirmBtn">
+                  <i class="fas fa-download"></i> Download GeoTIFF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+        // Hapus modal lama jika ada
+        $('#exportModal').remove();
+        $('body').append(modalHtml);
+
+        const modal = new bootstrap.Modal(document.getElementById('exportModal'));
+        modal.show();
+
+        // Cancel
+        $('#exportCancelBtn, #exportModal').on('hidden.bs.modal', () => {
+          resolve(null);
+        });
+
+        // Confirm
+        $('#exportConfirmBtn').on('click', () => {
+          const [lType, lExtra] = $('#exportLayerSelect').val().split('|');
+          const selectedScale = parseInt($('#exportScaleSelect').val());
+
+          modal.hide();
+          resolve({
+            layer_type: lType,
+            index_name: lType === 'vegetation' ? lExtra : null,
+            dataset: lType === 'landcover' ? lExtra : null,
+            scale: selectedScale
+          });
+        });
+      });
+    }
+
+    function buildAOIPayload() {
+      if (!currentAOI) return null;
+
+      // ✅ Gunakan GeoJSON polygon jika tersedia
+      if (currentAOI.geojson) {
+        return { geojson: currentAOI.geojson };
+      }
+
+      // ── Fallback ke bounding box ──────────────────────────────────
+      // currentAOI.geometry bisa berupa Leaflet LatLngBounds
+      const bounds = currentAOI.geometry;
+      if (bounds && typeof bounds.getSouthWest === 'function') {
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+        return {
+          west: sw.lng,
+          south: sw.lat,
+          east: ne.lng,
+          north: ne.lat,
+        };
+      }
+
+      // Jika geometry sudah berupa plain object {west,south,east,north}
+      if (bounds && 'west' in bounds) {
+        return {
+          west: bounds.west,
+          south: bounds.south,
+          east: bounds.east,
+          north: bounds.north,
+        };
+      }
+
+      return null;
     }
 
     function downloadStatistics() {
@@ -4437,44 +4653,29 @@
     }
 
     function generateReport() {
+      const times = analysisResults._processingTimes || {};
       let report = `# GEE Analysis Report\n\n`;
       report += `**Date:** ${new Date().toLocaleString()}\n`;
       report += `**Region:** ${currentAOI.name}\n`;
       report += `**Area:** ${currentAOI.area} km²\n`;
       report += `**Year:** ${$('#yearValue').text()}\n\n`;
 
-      // ✅ Add processing times section
-      if (Object.keys(processTimers).length > 0) {
+      if (Object.keys(times).length) {
         report += `## Processing Performance\n\n`;
-
-        if (processTimers.vegetation) {
-          report += `- **Vegetation Analysis:** ${formatDuration(processTimers.vegetation)}\n`;
-        }
-        if (processTimers.landcover) {
-          report += `- **Land Cover Analysis:** ${formatDuration(processTimers.landcover)}\n`;
-        }
-        if (processTimers.carbon) {
-          report += `- **Carbon Analysis:** ${formatDuration(processTimers.carbon)}\n`;
-        }
-        if (processTimers.total) {
-          report += `- **Total Time:** ${formatDuration(processTimers.total)}\n`;
-        }
-
-        report += `\n`;
+        if (times.vegetation) report += `- **Vegetation:** ${formatDuration(times.vegetation)}\n`;
+        if (times.landcover) report += `- **Land Cover:** ${formatDuration(times.landcover)}\n`;
+        if (times.carbon) report += `- **Carbon:** ${formatDuration(times.carbon)}\n`;
+        if (times.total) report += `- **Total:** ${formatDuration(times.total)}\n`;
+        report += '\n';
       }
 
-      // Vegetation section
       if (analysisResults.vegetation) {
         report += `## Vegetation Indices\n\n`;
         report += `**Images Found:** ${analysisResults.vegetation.collection_size}\n`;
+        if (times.vegetation) report += `**Processing Time:** ${formatDuration(times.vegetation)}\n`;
+        report += '\n';
 
-        if (analysisResults.vegetation.processing_time) {
-          report += `**Processing Time:** ${formatDuration(analysisResults.vegetation.processing_time)}\n`;
-        }
-
-        report += `\n`;
-
-        for (const [index, stats] of Object.entries(analysisResults.vegetation.indices)) {
+        for (const [index, stats] of Object.entries(analysisResults.vegetation.indices || {})) {
           report += `### ${index}\n`;
           report += `- Min: ${parseFloat(stats.min).toFixed(4)}\n`;
           report += `- Mean: ${parseFloat(stats.mean).toFixed(4)}\n`;
@@ -4483,57 +4684,49 @@
         }
       }
 
-      // Land cover section
-      if (analysisResults.landcover && analysisResults.landcover.Dynamic_World) {
-        report += `## Land Cover Distribution\n\n`;
+      for (const dsKey of ['Dynamic_World', 'ESA_WorldCover', 'ESRI_LandCover']) {
+        const ds = analysisResults.landcover?.[dsKey];
+        if (!ds?.classes) continue;
 
-        if (analysisResults.landcover.processing_time) {
-          report += `**Processing Time:** ${formatDuration(analysisResults.landcover.processing_time)}\n\n`;
-        }
+        report += `## Land Cover – ${dsKey.replace(/_/g, ' ')}\n\n`;
+        if (times.landcover) report += `**Processing Time:** ${formatDuration(times.landcover)}\n\n`;
 
-        for (const [className, data] of Object.entries(analysisResults.landcover.Dynamic_World.classes)) {
-          report += `- **${className}:** ${data.area} ha (${data.percentage}%)\n`;
+        for (const [cls, d] of Object.entries(ds.classes)) {
+          report += `- **${cls}:** ${d.area} ha (${d.percentage}%)\n`;
         }
-        report += `\n`;
+        report += '\n';
       }
 
-      // Carbon section
       if (analysisResults.carbon) {
+        const cd = analysisResults.carbon;
+        const stats = cd.carbon_estimated?.statistics || {};
+        const ai = cd.area_info || {};
+        const mi = cd.model_info || {};
+
         report += `## Carbon Stock Analysis\n\n`;
-
-        const carbonData = analysisResults.carbon;
-        const stats = carbonData.carbon_estimated.statistics;
-        const areaInfo = carbonData.area_info;
-        const modelPerf = carbonData.model_performance;
-
-        if (carbonData.processing_time) {
-          report += `**Processing Time:** ${formatDuration(carbonData.processing_time)}\n\n`;
-        }
+        if (times.carbon) report += `**Processing Time:** ${formatDuration(times.carbon)}\n\n`;
 
         report += `### Carbon Density Statistics\n`;
-        report += `- Mean: ${stats.mean.toFixed(2)} Mg/ha\n`;
-        report += `- Std Dev: ${stats.std_dev.toFixed(2)} Mg/ha\n`;
-        report += `- Min: ${stats.min.toFixed(2)} Mg/ha\n`;
-        report += `- Max: ${stats.max.toFixed(2)} Mg/ha\n\n`;
+        report += `- Mean: ${(stats.mean || 0).toFixed(2)} Mg/ha\n`;
+        report += `- Std Dev: ${(stats.std_dev || 0).toFixed(2)} Mg/ha\n`;
+        report += `- Min: ${(stats.min || 0).toFixed(2)} Mg/ha\n`;
+        report += `- Max: ${(stats.max || 0).toFixed(2)} Mg/ha\n\n`;
 
         report += `### Total Carbon Stock\n`;
-        report += `- Area: ${areaInfo.area_ha.toLocaleString()} hectares\n`;
-        report += `- Total Carbon: ${areaInfo.total_carbon_tons.toLocaleString()} tons\n`;
-        report += `- CO₂ Equivalent: ${areaInfo.carbon_dioxide_equivalent_tons.toLocaleString()} tons CO₂e\n\n`;
-
-        report += `### Model Performance\n`;
-        report += `- RMSE: ${modelPerf.rmse.toFixed(2)} Mg/ha\n`;
-        report += `- ${modelPerf.description}\n\n`;
+        report += `- Calculation Area: ${(ai.calculation_area_ha || 0).toLocaleString()} ha\n`;
+        report += `- Total Carbon: ${(ai.total_carbon_tons || 0).toLocaleString()} tons\n`;
+        report += `- CO₂ Equivalent: ${(ai.carbon_dioxide_equivalent_tons || 0).toLocaleString()} tons CO₂e\n`;
+        report += `- Reference Dataset: ${mi.reference_dataset || 'N/A'} (${mi.reference_dataset_year || 'N/A'})\n\n`;
       }
 
-      report += `\n---\n*Generated by GEE Analysis Platform*`;
+      report += `\n---\n*Generated by SAVEGEO – AI Imagery Analytics Platform*`;
 
-      const dataBlob = new Blob([report], { type: 'text/markdown' });
-      const url = URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `gee_report_${currentAOI.name.replace(/\s+/g, '_')}_${Date.now()}.md`;
-      link.click();
+      const blob = new Blob([report], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `savegeo_report_${currentAOI.name.replace(/\s+/g, '_')}_${Date.now()}.md`;
+      a.click();
       URL.revokeObjectURL(url);
 
       showAlert('Report generated successfully!', 'success');
@@ -4607,6 +4800,13 @@
       }
     }
 
+    $(function () {
+      let m = new Date().getMonth() + 1; // 1-12
+
+      $("#lcStartMonth").val(1);
+      $("#lcEndMonth").val(m === 1 ? 1 : m - 1);
+    });
+
     function hideLoading() {
       // Stop timer
       if (timerInterval) {
@@ -4672,6 +4872,15 @@
         $('#carbonYearSelector').hide();
       }
     }
+
+    function setYearSlider() {
+      const y = new Date().getFullYear();
+      yearSlider.max = y;
+      yearSlider.value = y;
+      yearValue.textContent = y;
+      yearSlider.oninput = () => yearValue.textContent = yearSlider.value;
+    }
+    setYearSlider();
 
     // Initialize on page load
     updateDatasetDescription();
