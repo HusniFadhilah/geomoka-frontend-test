@@ -1,0 +1,959 @@
+<!-- frontend\admin.html -->
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAVEGEO Admin Panel</title>
+  <!-- Google Fonts - Montserrat -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="icon" type="image/png" href="/logo.jpg">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <link rel="stylesheet" href="/admin.css">
+
+</head>
+
+<body>
+
+  <!-- ===== LOGIN ===== -->
+  <div id="login-screen" style="display:none">
+    <div class="login-box">
+      <div class="text-center align-items-center gap-1 mb-3">
+        <!-- <div class="sb-logo-icon"><i class="fas fa-globe"></i></div> -->
+        <img src="https://upload.wikimedia.org/wikipedia/id/2/20/Logo_Universitas_Diponegoro.png"
+          alt="Universitas Diponegoro" height="36" class="bg-light rounded">
+        <img src="https://upload.wikimedia.org/wikipedia/id/8/88/Logo_Len_Industri_Baru.png" alt="PT LEN Industri"
+          height="36" class="bg-light rounded">
+      </div>
+      <div class="login-title">SAVEGEO Admin</div>
+      <div class="login-sub">Platform Management Console</div>
+      <div class="login-field"><label>Username</label><input id="li-user" value="admin" autocomplete="username"></div>
+      <div class="login-field"><label>Password</label><input id="li-pass" type="password" value="admin123"
+          autocomplete="current-password"></div>
+      <div class="login-error" id="li-err">Username atau password salah</div>
+      <button class="login-btn" onclick="doLogin()">Masuk</button>
+    </div>
+  </div>
+
+  <!-- ===== APP ===== -->
+  <div class="layout" id="app" style="display:none">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sb-logo">
+        <a href="/" class="text-decoration-none">
+          <div class="d-flex align-items-center gap-1">
+            <!-- <div class="sb-logo-icon"><i class="fas fa-globe"></i></div> -->
+            <img src="https://upload.wikimedia.org/wikipedia/id/2/20/Logo_Universitas_Diponegoro.png"
+              alt="Universitas Diponegoro" height="36" class="bg-light rounded">
+            <img src="https://upload.wikimedia.org/wikipedia/id/8/88/Logo_Len_Industri_Baru.png" alt="PT LEN Industri"
+              height="36" class="bg-light rounded">
+            <div class="sb-logo-text ms-3 me-2">SAVEGEO <small>Admin Panel v1.0</small></div>
+          </div>
+        </a>
+      </div>
+      <div class="sb-nav">
+        <div class="sb-section">Utama</div>
+        <a class="sb-item active" id="si-ov" onclick="nav('ov')">
+          <i class="fas fa-th-large"></i><span>Overview</span>
+        </a>
+        <div class="sb-section">Konfigurasi</div>
+        <a class="sb-item" id="si-ge" onclick="nav('ge')">
+          <i class="fas fa-satellite-dish"></i><span>GEE Credentials</span>
+        </a>
+        <a class="sb-item" id="si-ml" onclick="nav('ml')">
+          <i class="fas fa-brain"></i><span>ML Models</span>
+        </a>
+        <a class="sb-item" id="si-cf" onclick="nav('cf')">
+          <i class="fas fa-sliders-h"></i><span>System Config</span>
+        </a>
+        <a class="sb-item" id="si-us" onclick="nav('us')">
+          <i class="fas fa-user-shield"></i><span>Admin Users</span>
+        </a>
+      </div>
+      <div class="sb-foot">
+        <div class="sb-avatar" id="sb-av">AD</div>
+        <span class="sb-foot-name" id="sb-name">admin</span>
+        <span class="sb-foot-logout" onclick="doLogout()" title="Logout"><i class="fas fa-sign-out-alt"></i></span>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <div class="topbar-title" id="tb-title">Overview</div>
+          <div class="topbar-sub" id="tb-sub">Dashboard sistem SAVEGEO</div>
+        </div>
+        <div class="topbar-right">
+          <div class="ee-badge fail" id="ee-badge">
+            <div class="ee-dot"></div>
+            <span id="ee-text">Checking...</span>
+          </div>
+          <button class="btn-sm" onclick="reinitEE()"><i class="fas fa-sync-alt"></i> Reinit EE</button>
+        </div>
+      </div>
+
+      <div class="page-content">
+
+        <!-- ===== OVERVIEW ===== -->
+        <div class="page-section active" id="sec-ov">
+          <div class="stat-grid" id="stat-grid">
+            <div class="stat-card">
+              <div class="stat-val" id="st-ee">—</div>
+              <div class="stat-label">Earth Engine</div><span class="stat-badge badge-gray" id="st-ee-b">checking</span>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val" id="st-cred" style="font-size:13px;padding-top:4px">—</div>
+              <div class="stat-label">Credential Aktif</div><span class="stat-badge badge-blue">service account</span>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val" id="st-models">—</div>
+              <div class="stat-label">ML Models</div><span class="stat-badge badge-blue" id="st-models-b">carbon</span>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val" id="st-cfg">—</div>
+              <div class="stat-label">Config Keys</div><span class="stat-badge badge-gray">4 kategori</span>
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="card">
+              <div class="card-header-custom"><span>Status sistem</span></div>
+              <div class="card-body-custom" id="status-rows"></div>
+            </div>
+            <div class="card">
+              <div class="card-header-custom"><span>Aksi cepat</span></div>
+              <div class="card-body-custom" style="display:flex;flex-direction:column;gap:6px">
+                <button class="btn-sm primary" onclick="nav('ge')"><i class="fas fa-key"></i> Kelola GEE
+                  Credentials</button>
+                <button class="btn-sm primary" onclick="nav('ml')"><i class="fas fa-upload"></i> Upload ML
+                  Model</button>
+                <button class="btn-sm primary" onclick="nav('cf')"><i class="fas fa-edit"></i> Edit System
+                  Config</button>
+                <button class="btn-sm success" onclick="reinitEE()"><i class="fas fa-power-off"></i> Reinitialize Earth
+                  Engine</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== GEE CREDENTIALS ===== -->
+        <div class="page-section" id="sec-ge">
+          <div class="card">
+            <div class="card-header-custom">
+              <span>Service account credentials</span>
+              <button class="btn-sm primary" onclick="toggleForm('gee-form')"><i class="fas fa-plus"></i> Upload
+                credential</button>
+            </div>
+            <div class="card-body-custom">
+              <!-- Upload form -->
+              <div class="collapse-form" id="gee-form">
+                <div class="two-col" style="margin-bottom:0.75rem">
+                  <div class="form-field"><label class="form-label">Label / nama deskriptif</label><input
+                      class="form-input" id="gee-label" placeholder="cth: Production SA 2025"></div>
+                  <div class="form-field"><label class="form-label">Catatan (opsional)</label><input class="form-input"
+                      id="gee-notes" placeholder="Digunakan untuk produksi"></div>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">File JSON service account</label>
+                  <div class="upload-zone" id="gee-zone" onclick="document.getElementById('gee-file').click()"
+                    ondragover="event.preventDefault();this.classList.add('dragover')"
+                    ondragleave="this.classList.remove('dragover')" ondrop="geeFileDrop(event)">
+                    <i class="fas fa-file-code" style="font-size:20px;color:#94a3b8;margin-bottom:6px"></i>
+                    <div style="font-size:12px;color:#64748b">Klik atau drag & drop file <strong>.json</strong> service
+                      account di sini</div>
+                    <div id="gee-filename" style="font-size:11px;color:#3b82f6;margin-top:4px"></div>
+                  </div>
+                  <input type="file" id="gee-file" accept=".json" style="display:none" onchange="geeFileSelect(this)">
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:0.75rem">
+                  <input type="checkbox" id="gee-activate" checked>
+                  <label for="gee-activate" style="font-size:11px;color:var(--text-muted)">Langsung aktifkan setelah
+                    upload</label>
+                </div>
+                <div style="display:flex;gap:6px">
+                  <button class="btn-sm primary" onclick="uploadGEE()"><i class="fas fa-upload"></i> Upload</button>
+                  <button class="btn-sm" onclick="toggleForm('gee-form')">Batal</button>
+                </div>
+              </div>
+              <!-- Table -->
+              <div style="overflow-x:auto">
+                <table class="tbl">
+                  <colgroup>
+                    <col style="width:15%">
+                    <col style="width:14%">
+                    <col style="width:25%">
+                    <col style="width:10%">
+                    <col style="width:12%">
+                    <col style="width:24%">
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Label</th>
+                      <th>Project ID</th>
+                      <th>Email</th>
+                      <th>Status</th>
+                      <th>Diupload</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="gee-tbody">
+                    <tr>
+                      <td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem">Memuat...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== ML MODELS ===== -->
+        <div class="page-section" id="sec-ml">
+          <div class="card">
+            <div class="card-header-custom">
+              <span>ML Models tersimpan</span>
+              <button class="btn-sm primary" onclick="toggleForm('ml-form')"><i class="fas fa-plus"></i> Upload
+                model</button>
+            </div>
+            <div class="card-body-custom">
+              <!-- Upload form -->
+              <div class="collapse-form" id="ml-form">
+                <div class="three-col" style="margin-bottom:0.5rem">
+                  <div class="form-field"><label class="form-label">Name (slug) *</label><input class="form-input"
+                      id="ml-name" placeholder="carbon_ridge_v3"></div>
+                  <div class="form-field"><label class="form-label">Display name</label><input class="form-input"
+                      id="ml-dispname" placeholder="Carbon Ridge v3"></div>
+                  <div class="form-field"><label class="form-label">Tipe *</label>
+                    <select class="form-select" id="ml-type">
+                      <option value="carbon">carbon</option>
+                      <option value="vegetation">vegetation</option>
+                      <option value="landcover">landcover</option>
+                    </select>
+                  </div>
+                  <div class="form-field"><label class="form-label">Algoritma</label>
+                    <select class="form-select" id="ml-algo">
+                      <option value="Ridge">Ridge</option>
+                      <option value="Lasso">Lasso</option>
+                      <option value="Linear">Linear</option>
+                      <option value="ElasticNet">ElasticNet</option>
+                      <option value="RandomForest">RandomForest</option>
+                      <option value="XGBoost">XGBoost</option>
+                    </select>
+                  </div>
+                  <div class="form-field"><label class="form-label">Versi</label><input class="form-input"
+                      id="ml-version" placeholder="1.0.0"></div>
+                  <div class="form-field"><label class="form-label">Metrics JSON</label><input class="form-input"
+                      id="ml-metrics" placeholder='{"r2":0.85,"rmse":19.2}'></div>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">File model (.pkl, .joblib, .h5, .onnx, .pt)</label>
+                  <div class="upload-zone" id="ml-zone" onclick="document.getElementById('ml-file').click()"
+                    ondragover="event.preventDefault();this.classList.add('dragover')"
+                    ondragleave="this.classList.remove('dragover')" ondrop="mlFileDrop(event)">
+                    <i class="fas fa-cube" style="font-size:20px;color:#94a3b8;margin-bottom:6px"></i>
+                    <div style="font-size:12px;color:#64748b">Klik atau drag & drop file model</div>
+                    <div id="ml-filename" style="font-size:11px;color:#3b82f6;margin-top:4px"></div>
+                  </div>
+                  <input type="file" id="ml-file" accept=".pkl,.joblib,.h5,.pt,.pth,.onnx,.bin" style="display:none"
+                    onchange="mlFileSelect(this)">
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:0.75rem">
+                  <input type="checkbox" id="ml-setdef">
+                  <label for="ml-setdef" style="font-size:11px;color:var(--text-muted)">Jadikan default untuk tipe
+                    ini</label>
+                </div>
+                <div style="display:flex;gap:6px">
+                  <button class="btn-sm primary" onclick="uploadModel()"><i class="fas fa-upload"></i> Upload</button>
+                  <button class="btn-sm" onclick="toggleForm('ml-form')">Batal</button>
+                </div>
+              </div>
+              <!-- Table -->
+              <div style="overflow-x:auto">
+                <table class="tbl">
+                  <colgroup>
+                    <col style="width:20%">
+                    <col style="width:9%">
+                    <col style="width:10%">
+                    <col style="width:16%">
+                    <col style="width:8%">
+                    <col style="width:9%">
+                    <col style="width:28%">
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Model</th>
+                      <th>Tipe</th>
+                      <th>Algoritma</th>
+                      <th>Metrik</th>
+                      <th>Ukuran</th>
+                      <th>Status</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ml-tbody">
+                    <tr>
+                      <td colspan="7" style="text-align:center;color:var(--text-muted);padding:1.5rem">Memuat...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== SYSTEM CONFIG ===== -->
+        <div class="page-section" id="sec-cf">
+          <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:0.875rem">
+            <button class="btn-sm" onclick="loadConfig()"><i class="fas fa-sync-alt"></i> Reload dari DB</button>
+            <button class="btn-sm" onclick="resetAllConfig()" style="color:#b45309;border-color:#fcd34d"><i
+                class="fas fa-undo"></i> Reset semua ke default</button>
+            <button class="btn-sm primary" onclick="saveConfig()"><i class="fas fa-save"></i> Simpan semua
+              perubahan</button>
+          </div>
+          <div id="cfg-sections"></div>
+        </div>
+
+        <!-- ===== ADMIN USERS ===== -->
+        <div class="page-section" id="sec-us">
+          <div class="card">
+            <div class="card-header-custom">
+              <span>Administrator terdaftar</span>
+            </div>
+            <div class="card-body-custom">
+              <table class="tbl">
+                <colgroup>
+                  <col style="width:35%">
+                  <col style="width:12%">
+                  <col style="width:18%">
+                  <col style="width:20%">
+                  <col style="width:15%">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Status</th>
+                    <th>Dibuat</th>
+                    <th>Login terakhir</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="users-tbody">
+                  <tr>
+                    <td colspan="5" style="text-align:center;color:var(--text-muted);padding:1.5rem">Memuat...</td>
+                  </tr>
+                </tbody>
+              </table>
+              <!-- Change password form -->
+              <div class="collapse-form" id="pw-form" style="margin-top:0.5rem">
+                <div style="max-width:320px">
+                  <div class="form-field"><label class="form-label">Password lama</label><input class="form-input"
+                      id="pw-old" type="password" placeholder="••••••••"></div>
+                  <div class="form-field"><label class="form-label">Password baru (min. 8 karakter)</label><input
+                      class="form-input" id="pw-new" type="password" placeholder="••••••••"></div>
+                  <div class="form-field"><label class="form-label">Konfirmasi password baru</label><input
+                      class="form-input" id="pw-confirm" type="password" placeholder="••••••••"></div>
+                  <div style="display:flex;gap:6px">
+                    <button class="btn-sm primary" onclick="changePassword()">Simpan</button>
+                    <button class="btn-sm" onclick="toggleForm('pw-form')">Batal</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end page-content -->
+    </div><!-- end main -->
+  </div><!-- end layout -->
+
+  <div id="toast"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script>
+    // ─────────────────────────────────────────────
+    // Config
+    // ─────────────────────────────────────────────
+    const BASE = (window.API_BASE_URL || 'http://localhost:5000').replace(/\/api$/, '');
+    let JWT = '';
+    let currentUser = null;
+    let geeFileData = null;
+    let mlFileData = null;
+
+    // ─────────────────────────────────────────────
+    // API helper
+    // ─────────────────────────────────────────────
+    async function api(method, path, body = null, isForm = false) {
+      const headers = {};
+      if (JWT) headers['Authorization'] = 'Bearer ' + JWT;
+      if (body && !isForm) headers['Content-Type'] = 'application/json';
+
+      const opts = { method, headers };
+      if (body) opts.body = isForm ? body : JSON.stringify(body);
+
+      try {
+        const r = await fetch(BASE + path, opts);
+        const data = await r.json();
+        return { ok: r.ok, status: r.status, data };
+      } catch (e) {
+        return { ok: false, status: 0, data: { error: e.message } };
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Toast
+    // ─────────────────────────────────────────────
+    function toast(msg, type = 's') {
+      const el = document.getElementById('toast');
+      el.className = type;
+      el.textContent = msg;
+      el.style.opacity = '1';
+      setTimeout(() => el.style.opacity = '0', 3000);
+    }
+
+    // ─────────────────────────────────────────────
+    // Login / Logout
+    // ─────────────────────────────────────────────
+    async function doLogin() {
+      const u = document.getElementById('li-user').value.trim();
+      const p = document.getElementById('li-pass').value;
+      const r = await api('POST', '/api/admin/auth/login', { username: u, password: p });
+
+      if (r.ok && r.data.token) {
+        JWT = r.data.token;
+        currentUser = r.data.user;
+        localStorage.setItem('sg_jwt', JWT);
+
+        document.getElementById('li-err').style.display = 'none';
+        applyUserToUI(currentUser);
+        showApp();
+        initApp();
+      } else {
+        document.getElementById('li-err').textContent = r.data.error || 'Login gagal';
+        document.getElementById('li-err').style.display = 'block';
+        showLogin();
+      }
+    }
+
+    function doLogout() {
+      JWT = '';
+      currentUser = null;
+      localStorage.removeItem('sg_jwt');
+      showLogin();
+    }
+
+    // ─────────────────────────────────────────────
+    // Navigation
+    // ─────────────────────────────────────────────
+    const NAV_MAP = {
+      ov: ['Overview', 'Dashboard sistem SAVEGEO', loadOverview],
+      ge: ['GEE Credentials', 'Kelola service account Google Earth Engine', loadGEE],
+      ml: ['ML Models', 'Kelola model machine learning yang diupload', loadModels],
+      cf: ['System Config', 'Konfigurasi aplikasi tersimpan di database', loadConfig],
+      us: ['Admin Users', 'Kelola akun administrator', loadUsers],
+    };
+
+    function nav(tab) {
+      document.querySelectorAll('.sb-item').forEach(e => e.classList.remove('active'));
+      document.getElementById('si-' + tab).classList.add('active');
+      document.querySelectorAll('.page-section').forEach(e => e.classList.remove('active'));
+      document.getElementById('sec-' + tab).classList.add('active');
+      document.getElementById('tb-title').textContent = NAV_MAP[tab][0];
+      document.getElementById('tb-sub').textContent = NAV_MAP[tab][1];
+      NAV_MAP[tab][2]();
+    }
+
+    function toggleForm(id) {
+      const el = document.getElementById(id);
+      el.classList.toggle('open');
+    }
+
+    // ─────────────────────────────────────────────
+    // Init
+    // ─────────────────────────────────────────────
+    async function initApp() {
+      await checkEE();
+      loadOverview();
+    }
+
+    async function checkEE() {
+      const r = await api('GET', '/api/health');
+      const badge = document.getElementById('ee-badge');
+      const text = document.getElementById('ee-text');
+      if (r.ok && r.data.ee_initialized) {
+        badge.className = 'ee-badge ok';
+        text.textContent = 'Earth Engine aktif';
+      } else {
+        badge.className = 'ee-badge fail';
+        text.textContent = 'Earth Engine offline';
+      }
+      return r.data;
+    }
+
+    async function reinitEE() {
+      const r = await api('POST', '/api/admin/gee/reinitialize');
+      if (r.ok) { toast('Earth Engine berhasil diinisialisasi ulang'); checkEE(); }
+      else toast(r.data.message || 'Gagal reinit EE', 'e');
+    }
+
+    // ─────────────────────────────────────────────
+    // Overview
+    // ─────────────────────────────────────────────
+    async function loadOverview() {
+      const [health, gee, models, cfgR] = await Promise.all([
+        api('GET', '/api/health'),
+        api('GET', '/api/admin/gee/status'),
+        api('GET', '/api/admin/models?model_type=carbon'),
+        api('GET', '/api/admin/config'),
+      ]);
+
+      const ee = health.ok && health.data.ee_initialized;
+      const activeCred = gee.ok ? gee.data.active_credential : null;
+      const modelCount = models.ok ? models.data.models.length : '?';
+      const cfgCount = cfgR.ok ? Object.values(cfgR.data.config).reduce((s, v) => s + v.length, 0) : '?';
+
+      document.getElementById('st-ee').textContent = ee ? 'Aktif' : 'Offline';
+      document.getElementById('st-ee-b').className = 'stat-badge ' + (ee ? 'badge-green' : 'badge-red');
+      document.getElementById('st-ee-b').textContent = ee ? 'initialized' : 'not ready';
+      document.getElementById('st-cred').textContent = activeCred ? activeCred.label : 'Tidak ada';
+      document.getElementById('st-models').textContent = modelCount;
+      document.getElementById('st-cfg').textContent = cfgCount;
+
+      const rows = [
+        ['Earth Engine', ee ? 'ok' : 'fail', ee ? 'Initialized' : 'Offline', ee ? 'badge-green' : 'badge-red'],
+        ['Database', 'ok', 'Connected', 'badge-green'],
+        ['Credential aktif', 'info', activeCred ? activeCred.client_email.split('@')[0] : '—', 'badge-blue'],
+        ['Active models', 'info', modelCount + ' carbon', 'badge-blue'],
+      ];
+      document.getElementById('status-rows').innerHTML = rows.map(([k, , , cls, v]) =>
+        `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid #f1f5f9">
+      <span style="font-size:12px;color:var(--text-muted)">${k}</span>
+      <span class="stat-badge ${rows.find(r => r[0] === k)[3]}">${rows.find(r => r[0] === k)[2]}</span>
+    </div>`).join('');
+    }
+
+    // ─────────────────────────────────────────────
+    // GEE Credentials
+    // ─────────────────────────────────────────────
+    async function loadGEE() {
+      const r = await api('GET', '/api/admin/gee/credentials');
+      if (!r.ok) { toast('Gagal memuat credentials', 'e'); return; }
+
+      const rows = r.data.credentials.map(c => `
+    <tr>
+      <td title="${c.label}">${c.label}</td>
+      <td class="tbl-mono" title="${c.project_id}">${c.project_id}</td>
+      <td style="font-size:10px" title="${c.client_email}">${c.client_email.slice(0, 26)}…</td>
+      <td><span class="stat-badge ${c.is_active ? 'badge-green' : 'badge-gray'}">${c.is_active ? 'Aktif' : 'Nonaktif'}</span></td>
+      <td style="font-size:11px;color:var(--text-muted)">${c.uploaded_at ? new Date(c.uploaded_at).toLocaleDateString('id-ID') : '—'}</td>
+      <td>
+        ${!c.is_active ? `<button class="btn-sm success" onclick="activateCred(${c.id})">Aktifkan</button>` : '<span style="font-size:10px;color:var(--text-muted)">aktif</span>'}
+        ${!c.is_active ? `<button class="btn-sm danger" style="margin-left:3px" onclick="deleteCred(${c.id})">Hapus</button>` : ''}
+      </td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:1.5rem">Belum ada credential. Upload service account JSON.</td></tr>';
+
+      document.getElementById('gee-tbody').innerHTML = rows;
+    }
+
+    function geeFileSelect(input) {
+      if (input.files[0]) {
+        geeFileData = input.files[0];
+        document.getElementById('gee-filename').textContent = '✓ ' + geeFileData.name;
+      }
+    }
+    function geeFileDrop(e) {
+      e.preventDefault();
+      document.getElementById('gee-zone').classList.remove('dragover');
+      const f = e.dataTransfer.files[0];
+      if (f) { geeFileData = f; document.getElementById('gee-filename').textContent = '✓ ' + f.name; }
+    }
+
+    async function uploadGEE() {
+      if (!geeFileData) { toast('Pilih file JSON terlebih dahulu', 'e'); return; }
+      const fd = new FormData();
+      fd.append('file', geeFileData);
+      fd.append('label', document.getElementById('gee-label').value);
+      fd.append('notes', document.getElementById('gee-notes').value);
+      fd.append('activate', document.getElementById('gee-activate').checked ? 'true' : 'false');
+
+      const r = await api('POST', '/api/admin/gee/credentials', fd, true);
+      if (r.ok) {
+        toast('Credential berhasil diupload');
+        toggleForm('gee-form');
+        geeFileData = null;
+        document.getElementById('gee-filename').textContent = '';
+        document.getElementById('gee-label').value = '';
+        document.getElementById('gee-notes').value = '';
+        loadGEE();
+        checkEE();
+      } else {
+        toast(r.data.error || 'Gagal upload', 'e');
+      }
+    }
+
+    async function activateCred(id) {
+      const r = await api('POST', `/api/admin/gee/credentials/${id}/activate`);
+      if (r.ok) { toast('Credential diaktifkan, EE diinisialisasi ulang'); loadGEE(); checkEE(); }
+      else toast(r.data.error || 'Gagal aktivasi', 'e');
+    }
+
+    async function deleteCred(id) {
+      if (!confirm('Hapus credential ini?')) return;
+      const r = await api('DELETE', `/api/admin/gee/credentials/${id}`);
+      if (r.ok) { toast('Credential dihapus'); loadGEE(); }
+      else toast(r.data.error || 'Gagal hapus', 'e');
+    }
+
+    // ─────────────────────────────────────────────
+    // ML Models
+    // ─────────────────────────────────────────────
+    function formatAlgorithmName(algo) {
+      if (!algo) return '—';
+
+      const map = {
+        random_forest: 'Random Forest',
+        ridge: 'Ridge',
+        lasso: 'Lasso',
+        linear: 'Linear',
+        elasticnet: 'ElasticNet',
+        xgboost: 'XGBoost'
+      };
+
+      const key = String(algo).trim().toLowerCase();
+      if (map[key]) return map[key];
+
+      return key
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function getModelMetricSummary(m) {
+      const metrics = m.metrics || {};
+      const train = metrics.train_metrics || m.metadata_json?.train_metrics || {};
+      const cv = metrics.cv_metrics || m.metadata_json?.cv_metrics || {};
+
+      const trainR2 = train.r2 !== undefined ? Number(train.r2).toFixed(3) : '—';
+      const trainRMSE = train.rmse !== undefined ? Number(train.rmse).toFixed(2) : '—';
+      const cvR2 = cv.r2_mean !== undefined ? Number(cv.r2_mean).toFixed(3) : '—';
+      const cvRMSE = cv.rmse_mean !== undefined ? Number(cv.rmse_mean).toFixed(2) : '—';
+
+      return `
+      <div class="tbl-mono" style="line-height:1.4">
+        <div><strong>Train</strong> R² ${trainR2}</div>
+        <div><strong>Train</strong> RMSE ${trainRMSE}</div>
+        <div><strong>CV</strong> R² ${cvR2}</div>
+        <div><strong>CV</strong> RMSE ${cvRMSE}</div>
+      </div>
+    `;
+    }
+
+    function getModelStatusBadges(m) {
+      const badges = [];
+
+      badges.push(
+        `<span class="stat-badge ${m.is_active ? 'badge-green' : 'badge-gray'}">
+        ${m.is_active ? 'Aktif' : 'Nonaktif'}
+      </span>`
+      );
+
+      if (m.is_default) {
+        badges.push(`<span class="stat-badge badge-blue">Default</span>`);
+      }
+
+      if (m.is_legacy) {
+        badges.push(`<span class="stat-badge badge-amber">Legacy</span>`);
+      }
+
+      return `<div style="display:flex;flex-wrap:wrap;gap:4px">${badges.join('')}</div>`;
+    }
+
+    async function loadModels() {
+      const r = await api('GET', '/api/admin/models');
+      if (!r.ok) {
+        toast('Gagal memuat models', 'e');
+        return;
+      }
+
+      const models = r.data.models || [];
+
+      const rows = models.map(m => {
+        const algoLabel = formatAlgorithmName(m.algorithm);
+        const featureCount =
+          m.metrics?.n_features ??
+          m.metadata_json?.n_features ??
+          m.feature_names?.length ??
+          0;
+
+        const sampleCount =
+          m.metrics?.n_samples ??
+          m.metadata_json?.n_samples ??
+          '—';
+
+        const updatedAt = m.updated_at
+          ? new Date(m.updated_at).toLocaleDateString('id-ID')
+          : '—';
+
+        return `
+        <tr>
+          <td>
+            <div style="font-weight:600">${m.name || '—'}</div>
+            <div style="font-size:10px;color:var(--text-muted)">
+              ${m.display_name || '—'} • v${m.version || '—'}
+            </div>
+            <div style="font-size:10px;color:var(--text-muted)">
+              ${featureCount} fitur • ${sampleCount} sampel • update ${updatedAt}
+            </div>
+          </td>
+
+          <td>
+            <span class="stat-badge badge-blue">${m.model_type || '—'}</span>
+          </td>
+
+          <td>
+            <span class="stat-badge badge-gray">${algoLabel}</span>
+          </td>
+
+          <td>
+            ${getModelMetricSummary(m)}
+          </td>
+
+          <td style="font-size:11px;color:var(--text-muted)">
+            ${m.file_size_kb ? Number(m.file_size_kb).toFixed(1) + ' KB' : '—'}
+          </td>
+
+          <td>
+            ${getModelStatusBadges(m)}
+          </td>
+
+          <td>
+            ${!m.is_default ? `<button class="btn-sm" onclick="setDefault(${m.id})">Set default</button>` : ''}
+            <button class="btn-sm" onclick="toggleActive(${m.id}, ${m.is_active})">
+              ${m.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+            </button>
+            <button class="btn-sm danger" style="margin-left:3px" onclick="deleteModel(${m.id})">Hapus</button>
+          </td>
+        </tr>
+      `;
+      }).join('') || `
+      <tr>
+        <td colspan="7" style="text-align:center;color:var(--text-muted);padding:1.5rem">
+          Belum ada model. Upload model ML terlebih dahulu.
+        </td>
+      </tr>
+    `;
+
+      document.getElementById('ml-tbody').innerHTML = rows;
+    }
+
+    function mlFileSelect(input) {
+      if (input.files[0]) {
+        mlFileData = input.files[0];
+        document.getElementById('ml-filename').textContent = '✓ ' + mlFileData.name + ' (' + (mlFileData.size / 1024).toFixed(1) + ' KB)';
+      }
+    }
+    function mlFileDrop(e) {
+      e.preventDefault();
+      document.getElementById('ml-zone').classList.remove('dragover');
+      const f = e.dataTransfer.files[0];
+      if (f) { mlFileData = f; document.getElementById('ml-filename').textContent = '✓ ' + f.name; }
+    }
+
+    async function uploadModel() {
+      const name = document.getElementById('ml-name').value.trim();
+      if (!name) { toast('Name wajib diisi', 'e'); return; }
+      if (!mlFileData) { toast('Pilih file model', 'e'); return; }
+
+      const fd = new FormData();
+      fd.append('file', mlFileData);
+      fd.append('name', name);
+      fd.append('display_name', document.getElementById('ml-dispname').value || name);
+      fd.append('model_type', document.getElementById('ml-type').value);
+      fd.append('algorithm', document.getElementById('ml-algo').value);
+      fd.append('version', document.getElementById('ml-version').value);
+      fd.append('set_default', document.getElementById('ml-setdef').checked ? 'true' : 'false');
+      const metricsRaw = document.getElementById('ml-metrics').value.trim();
+      if (metricsRaw) {
+        try { JSON.parse(metricsRaw); fd.append('metrics', metricsRaw); }
+        catch { toast('Format metrics tidak valid (harus JSON)', 'e'); return; }
+      }
+
+      const r = await api('POST', '/api/admin/models/upload', fd, true);
+      if (r.ok) {
+        toast('Model berhasil diupload');
+        toggleForm('ml-form');
+        mlFileData = null;
+        document.getElementById('ml-filename').textContent = '';
+        document.getElementById('ml-name').value = '';
+        loadModels();
+      } else {
+        toast(r.data.error || 'Gagal upload', 'e');
+      }
+    }
+
+    async function setDefault(id) {
+      const r = await api('POST', `/api/admin/models/${id}/set-default`);
+      if (r.ok) { toast('Default model diperbarui'); loadModels(); }
+      else toast(r.data.error || 'Gagal', 'e');
+    }
+
+    async function toggleActive(id, currentActive) {
+      const r = await api('PUT', `/api/admin/models/${id}`, { is_active: !currentActive });
+      if (r.ok) { toast('Status model diperbarui'); loadModels(); }
+      else toast(r.data.error || 'Gagal', 'e');
+    }
+
+    async function deleteModel(id) {
+      if (!confirm('Hapus model ini? File juga akan dihapus.')) return;
+      const r = await api('DELETE', `/api/admin/models/${id}`);
+      if (r.ok) { toast('Model dihapus'); loadModels(); }
+      else toast(r.data.error || 'Gagal', 'e');
+    }
+
+    // ─────────────────────────────────────────────
+    // System Config
+    // ─────────────────────────────────────────────
+    const CAT_LABELS = { analysis: 'Analisis', year: 'Rentang Tahun', carbon: 'Carbon & Visualisasi', app: 'Aplikasi' };
+    const CAT_COLORS = { analysis: 'badge-blue', year: 'badge-amber', carbon: 'badge-green', app: 'badge-gray' };
+
+    async function loadConfig() {
+      const r = await api('GET', '/api/admin/config');
+      if (!r.ok) { toast('Gagal memuat config', 'e'); return; }
+
+      let html = '';
+      for (const [cat, items] of Object.entries(r.data.config)) {
+        const rows = items.map(item => `
+      <div class="cfg-row">
+        <span class="cfg-key" title="${item.key}">${item.key.split('.').pop()}</span>
+        <div class="cfg-val"><input data-k="${item.key}" value="${item.raw_value ?? ''}" title="${item.description || ''}"></div>
+        <span class="cfg-type">${item.value_type}</span>
+      </div>`).join('');
+
+        html += `<div class="card" style="margin-bottom:0.875rem">
+      <div class="card-header-custom">
+        <span><span class="stat-badge ${CAT_COLORS[cat] || 'badge-gray'}" style="margin-right:6px">${cat}</span>${CAT_LABELS[cat] || cat}</span>
+        <span style="font-size:10px;color:var(--text-muted)">${items.length} keys</span>
+      </div>
+      <div class="card-body-custom">${rows}</div>
+    </div>`;
+      }
+      document.getElementById('cfg-sections').innerHTML = html;
+    }
+
+    async function saveConfig() {
+      const inputs = document.querySelectorAll('[data-k]');
+      const updates = Array.from(inputs).map(i => ({ key: i.dataset.k, value: i.value }));
+      const r = await api('PUT', '/api/admin/config', { updates });
+      if (r.ok) toast(`${r.data.updated.length} konfigurasi disimpan ke DB`);
+      else toast(r.data.error || 'Gagal menyimpan', 'e');
+    }
+
+    async function resetAllConfig() {
+      if (!confirm('Reset semua konfigurasi ke nilai default?')) return;
+      const r = await api('POST', '/api/admin/config/reset', {});
+      if (r.ok) { toast('Config direset ke default'); loadConfig(); }
+      else toast(r.data.error || 'Gagal reset', 'e');
+    }
+
+    // ─────────────────────────────────────────────
+    // Admin Users
+    // ─────────────────────────────────────────────
+    async function loadUsers() {
+      const r = await api('GET', '/api/admin/auth/me');
+      if (!r.ok) return;
+      const u = r.data;
+      document.getElementById('users-tbody').innerHTML = `
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:28px;height:28px;border-radius:50%;background:#1d4ed8;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:600;flex-shrink:0">
+            ${u.username.substring(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <div style="font-weight:600">${u.username}</div>
+            <div style="font-size:10px;color:var(--text-muted)">${u.email || '—'}</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="stat-badge ${u.is_active ? 'badge-green' : 'badge-red'}">${u.is_active ? 'Aktif' : 'Nonaktif'}</span></td>
+      <td style="font-size:11px;color:var(--text-muted)">${u.created_at ? new Date(u.created_at).toLocaleDateString('id-ID') : '—'}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${u.last_login ? new Date(u.last_login).toLocaleString('id-ID') : '—'}</td>
+      <td><button class="btn-sm" onclick="toggleForm('pw-form')">Ganti password</button></td>
+    </tr>`;
+    }
+
+    async function changePassword() {
+      const old_pw = document.getElementById('pw-old').value;
+      const new_pw = document.getElementById('pw-new').value;
+      const confirm = document.getElementById('pw-confirm').value;
+      if (!old_pw || !new_pw) { toast('Semua field wajib diisi', 'e'); return; }
+      if (new_pw.length < 8) { toast('Password minimal 8 karakter', 'e'); return; }
+      if (new_pw !== confirm) { toast('Password baru tidak cocok', 'e'); return; }
+
+      const r = await api('PUT', '/api/admin/auth/change-password', { old_password: old_pw, new_password: new_pw });
+      if (r.ok) {
+        toast('Password berhasil diubah');
+        toggleForm('pw-form');
+        document.getElementById('pw-old').value = '';
+        document.getElementById('pw-new').value = '';
+        document.getElementById('pw-confirm').value = '';
+      } else {
+        toast(r.data.error || 'Gagal ganti password', 'e');
+      }
+    }
+
+    // ─────────────────────────────────────────────
+    // Auto-login jika JWT tersimpan
+    // ─────────────────────────────────────────────
+    async function bootstrapAuth() {
+      const saved = localStorage.getItem('sg_jwt');
+
+      if (!saved) {
+        showLogin();
+        return;
+      }
+
+      JWT = saved;
+
+      const r = await api('GET', '/api/admin/auth/me');
+      if (r.ok) {
+        currentUser = r.data;
+        applyUserToUI(currentUser);
+        showApp();
+        initApp();
+      } else {
+        localStorage.removeItem('sg_jwt');
+        JWT = '';
+        currentUser = null;
+        showLogin();
+      }
+    }
+
+    bootstrapAuth();
+
+    function showLogin() {
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+    }
+
+    function showApp() {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+    }
+
+    function applyUserToUI(user) {
+      document.getElementById('sb-name').textContent = user.username;
+      document.getElementById('sb-av').textContent = user.username.substring(0, 2).toUpperCase();
+    }
+
+    // Enter key untuk login
+    document.getElementById('li-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  </script>
+</body>
+
+</html>

@@ -636,3 +636,25 @@ body {
 .main-sidebar::-webkit-scrollbar-thumb:hover {
   background: var(--primary-color);
 }
+
+.skeleton-btn {
+  width: 130px;
+  height: 32px;
+  border-radius: 6px;
+  background: linear-gradient(90deg,
+      #e0e0e0 25%,
+      #f5f5f5 50%,
+      #e0e0e0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}

@@ -1,3 +1,4 @@
+// frontend\public\custom-scripts.js
 // ==========================================
 // SIDEBAR NAVIGATION FUNCTIONS
 // ==========================================
