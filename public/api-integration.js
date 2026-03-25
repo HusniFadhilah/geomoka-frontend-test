@@ -5,7 +5,7 @@
 
 // Configuration
 const API_CONFIG = {
-    baseURL: 'http://localhost:5000/api',
+    baseURL: 'http://localhost:8086/api',
     timeout: 120000, // 2 minutes
     retries: 3
 };
