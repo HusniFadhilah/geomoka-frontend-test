@@ -36,7 +36,7 @@ const AppConfig = (() => {
      * Dipanggil otomatis oleh ready() — tidak perlu dipanggil manual.
      */
     async function _fetch() {
-        const base = _baseUrl || window.API_BASE_URL || 'http://localhost:5000/api';
+        const base = _baseUrl || window.API_BASE_URL || 'http://localhost:8086/api';
         try {
             const res = await fetch(`${base.replace(/\/api$/, '')}/api/admin/config/public`, {
                 method: 'GET',
@@ -118,7 +118,7 @@ const AppConfig = (() => {
             console.error('[AppConfig] updateRemote requires admin JWT. Call setToken(jwt) first.');
             return false;
         }
-        const base = _baseUrl || window.API_BASE_URL || 'http://localhost:5000/api';
+        const base = _baseUrl || window.API_BASE_URL || 'http://localhost:8086/api';
         const url = `${base.replace(/\/api$/, '')}/api/admin/config`;
 
         let updates;

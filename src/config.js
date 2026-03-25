@@ -1,4 +1,5 @@
 /**
+ * frontend\src\config.js
  * Application Configuration
  * Centralized config management using Vite environment variables
  */

@@ -1,3 +1,4 @@
+// frontend\ecosystem.config.js
 module.exports = {
     apps: [
         {
