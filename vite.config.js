@@ -11,6 +11,10 @@ export default defineConfig({
         emptyOutDir: true,
         sourcemap: false,
         rollupOptions: {
+            input: {
+                main: resolve(__dirname, 'index.html'),
+                admin: resolve(__dirname, 'admin.html'),
+            },
             output: {
                 manualChunks: undefined
             }
