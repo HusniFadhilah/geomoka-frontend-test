@@ -26,6 +26,56 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
   <link rel="stylesheet" href="/style.css">
+  <style>
+    .language-dropdown .language-menu {
+      min-width: 160px;
+      width: max-content;
+      max-width: min(220px, calc(100vw - 16px));
+      z-index: 10000;
+    }
+
+    .language-dropdown .language-menu.show {
+      position: fixed !important;
+      inset: auto auto auto auto !important;
+      margin: 0 !important;
+      transform: none !important;
+    }
+
+    body>.language-menu.show {
+      position: fixed !important;
+      min-width: 160px;
+      width: max-content;
+      max-width: min(220px, calc(100vw - 16px));
+      margin: 0 !important;
+      transform: none !important;
+      z-index: 10000 !important;
+    }
+
+    #lcChangeTabs {
+      border-bottom: 0;
+      gap: 4px;
+    }
+
+    #lcChangeTabs .nav-link {
+      color: #f3fff6;
+      border-color: transparent;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    #lcChangeTabs .nav-link:hover,
+    #lcChangeTabs .nav-link:focus {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.34);
+    }
+
+    #lcChangeTabs .nav-link.active {
+      color: var(--primary-dark);
+      background: #ffffff;
+      border-color: #ffffff;
+    }
+  </style>
 </head>
 
 <body>
@@ -211,10 +261,11 @@
         </div>
         <div class="dropdown language-dropdown">
           <button class="btn btn-light btn-sm dropdown-toggle language-toggle" type="button" id="languageDropdownBtn"
-            data-bs-toggle="dropdown" aria-expanded="false" aria-label="Language">
+            data-bs-toggle="dropdown" data-bs-boundary="viewport" data-bs-reference="toggle" aria-expanded="false"
+            data-bs-display="static" aria-label="Language">
             <span id="currentLanguageCode" class="language-code">ID</span>
           </button>
-          <ul class="dropdown-menu shadow" aria-labelledby="languageDropdownBtn">
+          <ul class="dropdown-menu shadow language-menu" aria-labelledby="languageDropdownBtn">
             <li>
               <button class="dropdown-item language-option" type="button" data-lang="id">
                 <span class="language-code">ID</span>
@@ -1678,7 +1729,7 @@
                   <label class="form-label fw-bold"><i class="fas fa-calendar"></i> Rentang Bulan</label>
                   <div class="d-flex align-items-center gap-2">
                     <select class="form-select form-select-sm" id="lcChangeStartMonth">
-                      <option value="1">Jan</option>
+                      <option value="1" selected>Jan</option>
                       <option value="2">Feb</option>
                       <option value="3">Mar</option>
                       <option value="4">Apr</option>
@@ -1689,11 +1740,11 @@
                       <option value="9">Sep</option>
                       <option value="10">Okt</option>
                       <option value="11">Nov</option>
-                      <option value="12" selected>Des</option>
+                      <option value="12">Des</option>
                     </select>
                     <span class="text-muted">–</span>
                     <select class="form-select form-select-sm" id="lcChangeEndMonth">
-                      <option value="1">Jan</option>
+                      <option value="1" selected>Jan</option>
                       <option value="2">Feb</option>
                       <option value="3">Mar</option>
                       <option value="4">Apr</option>
@@ -1704,7 +1755,7 @@
                       <option value="9">Sep</option>
                       <option value="10">Okt</option>
                       <option value="11">Nov</option>
-                      <option value="12" selected>Des</option>
+                      <option value="12">Des</option>
                     </select>
                   </div>
                   <small class="text-muted">Berlaku untuk Dynamic World</small>
@@ -3037,31 +3088,171 @@
 
     const I18N_EXACT = {
       en: {
+        // --- navigation & sidebar ---
         'Pengaturan': 'Settings',
         'Panduan Lengkap': 'User Guide',
         'Tentang Program': 'About Program',
         'Detail Program': 'Program Details',
         'Analisis Stok Karbon': 'Carbon Stock Analysis',
         'Perubahan Lahan': 'Land Change',
+        'Perubahan Tutupan Lahan': 'Land Cover Change',
         'Pemetaan Bencana': 'Disaster Mapping',
+        // --- table headers (dataset docs) ---
         'Dokumentasi Dataset LULC': 'LULC Dataset Documentation',
         'Deskripsi': 'Description',
         'Resolusi': 'Resolution',
         'Periode': 'Period',
+        'Periode:': 'Period:',
         'Akurasi / Validasi': 'Accuracy / Validation',
         'Sumber': 'Source',
+        // --- region selectors ---
         'Provinsi': 'Province',
         'Kota/Kabupaten': 'City/Regency',
         'Kecamatan': 'District',
         'Kelurahan/Desa': 'Village',
+        // --- common form labels ---
         'Tahun': 'Year',
         'Bulan Mulai': 'Start Month',
         'Bulan Akhir': 'End Month',
         'Jalankan Analisis': 'Run Analysis',
         'Unduh Laporan': 'Download Report',
         'Pilih Dataset': 'Select Dataset',
+        // --- carbon module home accordion ---
+        'Quick Start Analisis Stok Karbon & Vegetasi': 'Quick Start Carbon Stock & Vegetation Analysis',
+        'Langkah Analisis': 'Analysis Steps',
+        'Tips & Bantuan': 'Tips & Help',
+        'Pilih AOI': 'Select AOI',
+        'Atur Parameter': 'Set Parameters',
+        '– Scroll ke bagian Area of Interest': '– Scroll to the Area of Interest section',
+        '– Gunakan panel kiri': '– Use the left panel',
+        '– Tunggu hasil & visualisasi': '– Wait for results & visualization',
+        'Buka Panduan Lengkap': 'Open Full Guide',
+        'Mulai dari area kecil untuk testing': 'Start with a small area for testing',
+        // --- settings panel labels (originally English in HTML) ---
+        'Jenis Analisis': 'Analysis Type',
+        'Zoom Peta': 'Map Zoom',
+        'Rentang Bulan': 'Month Range',
+        'Ambang Awan (%)': 'Cloud Threshold (%)',
+        'Indeks Vegetasi': 'Vegetation Indices',
+        'Dataset Tutupan Lahan': 'Land Cover Datasets',
+        'Mode Dynamic World': 'Dynamic World Mode',
+        'Rentang Bulan (Dynamic World)': 'Month Range (Dynamic World)',
+        // --- carbon parameters ---
+        'Parameter Analisis Karbon': 'Carbon Analysis Parameters',
+        'Dataset Referensi': 'Reference Dataset',
+        'Model Terlatih': 'Pre-trained Model',
+        'Tahun Dataset': 'Dataset Year',
+        'Rentang Tanggal Sentinel-2': 'Sentinel-2 Date Range',
+        'Mode Tampilan': 'Display Mode',
+        'Tampilkan Dataset Referensi di Peta': 'Show Reference Dataset on Map',
+        'Detail Model': 'Model Details',
+        'Lihat Info Model': 'View Model Info',
+        'Pilih model terlatih atau gunakan default': 'Select a trained model or use default',
+        'Memuat model...': 'Loading models...',
+        'Delta Estimasi Stok Karbon': 'Carbon Stock Estimation Delta',
+        'Hitung perubahan stok karbon antar tahun': 'Calculate carbon stock changes between years',
+        'Dari Tahun': 'From Year',
+        'Ke Tahun': 'To Year',
+        'Tahunan': 'Annual',
+        '2 tahun': '2 years',
+        '5 tahun': '5 years',
+        'Interval Tahun': 'Year Interval',
+        // --- land cover parameters ---
+        'Pilih satu atau beberapa dataset LULC': 'Select one or multiple LULC datasets',
+        'Dokumentasi Dataset': 'Dataset Documentation',
+        'Tampilkan kelas langka/tidak relevan tropis': 'Show rare/tropical-irrelevant classes',
+        'Hanya berlaku untuk Dynamic World': 'Only applies to Dynamic World',
+        'Berlaku untuk Dynamic World': 'Applies to Dynamic World',
+        'Analisis Peralihan Tutupan Lahan': 'Land Cover Transition Analysis',
+        'Sankey dan diagram perubahan antar tahun': 'Sankey and inter-year change diagrams',
+        'Dataset Transisi': 'Transition Dataset',
+        'Resolusi Transisi': 'Transition Resolution',
+        '10m (detail, area kecil)': '10m (detailed, small area)',
+        '100m (lebih cepat)': '100m (faster)',
+        '500m (MODIS / area luas)': '500m (MODIS / large area)',
+        // --- results section ---
+        'Peta Hasil': 'Results Map',
+        'Statistik': 'Statistics',
+        'Analisis Tutupan Lahan': 'Land Cover Analysis',
+        'Grafik Distribusi': 'Distribution Chart',
+        'Ekspor Hasil': 'Export Results',
+        'Unduh Statistik': 'Download Statistics',
+        'Buat Laporan': 'Generate Report',
+        'Statistik Densitas Karbon': 'Carbon Density Statistics',
+        'Total Stok Karbon': 'Total Carbon Stock',
+        'Performa Model': 'Model Performance',
+        'Peralihan Tutupan Lahan': 'Land Cover Transition',
+        'Sankey Perubahan Kelas': 'Class Change Sankey',
+        'Perubahan Terbesar': 'Largest Changes',
+        'Dari': 'From',
+        'Ke': 'To',
+        'Stabil vs Berubah': 'Stable vs Changed',
+        'Net Gain/Loss per Kelas': 'Net Gain/Loss per Class',
+        'Delta Antar Tahun': 'Year-over-Year Delta',
+        'AOI Terpilih': 'AOI Selected',
+        // --- disaster module ---
+        'Modul Sedang Dikembangkan': 'Module Under Development',
+        'Monitoring Banjir': 'Flood Monitoring',
+        'Monitoring Perubahan Lahan': 'Land Change Monitoring',
+        'Segera Hadir': 'Coming Soon',
+        // --- about module ---
+        'Kolaborasi': 'Collaboration',
+        'Riset Hilirisasi Program Ajakan Industri': 'Industry Collaboration Research Program',
+        'Fitur Utama': 'Key Features',
+        'Analisis Vegetasi': 'Vegetation Analysis',
+        'Estimasi Karbon': 'Carbon Estimation',
+        'Teknologi': 'Technology',
+        'Akses Cepat': 'Quick Access',
+        'Mulai Analisis': 'Start Analysis',
+        'Baca Panduan': 'Read Guide',
+        // --- details module ---
+        'Detail Program Penelitian': 'Research Program Details',
+        'Tim Peneliti': 'Research Team',
+        'Nama': 'Name',
+        'Jabatan': 'Position',
+        'Afiliasi': 'Affiliation',
+        'Ketua Peneliti': 'Lead Researcher',
+        'Anggota Peneliti': 'Research Member',
+        'Tim Mitra Industri': 'Industry Partner Team',
+        'Output Penelitian': 'Research Output',
+        'Paten Sederhana': 'Utility Model Patent',
+        'Platform Web': 'Web Platform',
+        'Deskripsi Inovasi': 'Innovation Description',
+        'Metodologi Penelitian': 'Research Methodology',
+        'Aktif': 'Active',
+        'Direktur Utama': 'President Director',
+        'Akuisisi Data': 'Data Acquisition',
+        'Estimasi Biomassa': 'Biomass Estimation',
+        'Konversi & Output': 'Conversion & Output',
+        'Catatan Metodologi:': 'Methodology Note:',
+        // --- LC change module ---
+        'Analisis Perubahan Tutupan Lahan': 'Land Cover Change Analysis',
+        'Deteksi transisi LULC antar tahun — Sankey, Matriks, Net Change & Time Series': 'LULC transition detection between years — Sankey, Matrix, Net Change & Time Series',
+        'Tahun Analisis': 'Analysis Year',
+        'Tambah Tahun': 'Add Year',
+        'Minimal 2 · Urutan otomatis': 'Min 2 · Auto sorted',
+        'Belum Ada Hasil': 'No Results Yet',
+        'Aliran transisi kelas': 'Class transition flow',
+        'Heatmap perpindahan': 'Transition heatmap',
+        'Gain & loss per kelas': 'Gain & loss per class',
+        'Evolusi multi-tahun': 'Multi-year evolution',
+        'Matriks Transisi': 'Transition Matrix',
+        'Ringkasan Perubahan (Periode Terpilih)': 'Change Summary (Selected Period)',
+        'Near real-time · Data tersedia tiap tahun (2015+)': 'Near real-time · Data available annually (2015+)',
+        '~1–2 menit per tahun': '~1–2 min per year',
+        'Setiap tahun = 1 request ke backend': 'Each year = 1 request to backend',
+        // --- guide module ---
+        'Panduan Lengkap Penggunaan Platform': 'Complete Platform Usage Guide',
+        'Memulai Analisis': 'Getting Started',
+        'Langkah 1: Memilih Area of Interest (AOI)': 'Step 1: Selecting Area of Interest (AOI)',
+        'Langkah 2: Memilih Jenis Analisis': 'Step 2: Selecting Analysis Type',
+        'Langkah 3: Mengatur Parameter': 'Step 3: Setting Parameters',
+        'Langkah 4: Menjalankan dan Membaca Hasil': 'Step 4: Running and Reading Results',
+        'Rekomendasi': 'Recommendation',
+        'Cocok untuk:': 'Suitable for:',
       },
       id: {
+        // --- navigation & sidebar ---
         'Settings': 'Pengaturan',
         'User Guide': 'Panduan Lengkap',
         'About Program': 'Tentang Program',
@@ -3070,22 +3261,148 @@
         'Land Change': 'Perubahan Lahan',
         'Land Cover Change': 'Perubahan Tutupan Lahan',
         'Disaster Mapping': 'Pemetaan Bencana',
+        // --- table headers (dataset docs) ---
         'LULC Dataset Documentation': 'Dokumentasi Dataset LULC',
         'Description': 'Deskripsi',
         'Resolution': 'Resolusi',
         'Period': 'Periode',
+        'Period:': 'Periode:',
         'Accuracy / Validation': 'Akurasi / Validasi',
         'Source': 'Sumber',
+        // --- region selectors ---
         'Province': 'Provinsi',
         'City/Regency': 'Kota/Kabupaten',
         'District': 'Kecamatan',
         'Village': 'Kelurahan/Desa',
+        // --- common form labels ---
         'Year': 'Tahun',
         'Start Month': 'Bulan Mulai',
         'End Month': 'Bulan Akhir',
         'Run Analysis': 'Jalankan Analisis',
         'Download Report': 'Unduh Laporan',
         'Select Dataset': 'Pilih Dataset',
+        // --- settings panel labels (originally English in HTML) ---
+        'Analysis Type': 'Jenis Analisis',
+        'Map Zoom': 'Zoom Peta',
+        'Month Range': 'Rentang Bulan',
+        'Cloud Threshold (%)': 'Ambang Awan (%)',
+        'Vegetation Indices': 'Indeks Vegetasi',
+        'Land Cover Datasets': 'Dataset Tutupan Lahan',
+        'Dynamic World Mode': 'Mode Dynamic World',
+        'Month Range (Dynamic World)': 'Rentang Bulan (Dynamic World)',
+        // --- carbon parameters ---
+        'Carbon Analysis Parameters': 'Parameter Analisis Karbon',
+        'Reference Dataset': 'Dataset Referensi',
+        'Pre-trained Model': 'Model Terlatih',
+        'Dataset Year': 'Tahun Dataset',
+        'Sentinel-2 Date Range': 'Rentang Tanggal Sentinel-2',
+        'Display Mode': 'Mode Tampilan',
+        'Show Reference Dataset on Map': 'Tampilkan Dataset Referensi di Peta',
+        'Model Details': 'Detail Model',
+        'View Model Info': 'Lihat Info Model',
+        'Select a trained model or use default': 'Pilih model terlatih atau gunakan default',
+        'Loading models...': 'Memuat model...',
+        'Carbon Stock Estimation Delta': 'Delta Estimasi Stok Karbon',
+        'Calculate carbon stock changes between years': 'Hitung perubahan stok karbon antar tahun',
+        'From Year': 'Dari Tahun',
+        'To Year': 'Ke Tahun',
+        'Annual': 'Tahunan',
+        '2 years': '2 tahun',
+        '5 years': '5 tahun',
+        'Year Interval': 'Interval Tahun',
+        // --- land cover parameters ---
+        'Select one or multiple LULC datasets': 'Pilih satu atau beberapa dataset LULC',
+        'Dataset Documentation': 'Dokumentasi Dataset',
+        'Show rare/tropical-irrelevant classes': 'Tampilkan kelas langka/tidak relevan tropis',
+        'Only applies to Dynamic World': 'Hanya berlaku untuk Dynamic World',
+        'Applies to Dynamic World': 'Berlaku untuk Dynamic World',
+        'Land Cover Transition Analysis': 'Analisis Peralihan Tutupan Lahan',
+        'Sankey and inter-year change diagrams': 'Sankey dan diagram perubahan antar tahun',
+        'Transition Dataset': 'Dataset Transisi',
+        'Transition Resolution': 'Resolusi Transisi',
+        // --- AOI section ---
+        'Load Region': 'Muat Wilayah',
+        'Set AOI': 'Atur AOI',
+        'Use Drawn AOI': 'Gunakan AOI yang Digambar',
+        'AOI Selected': 'AOI Terpilih',
+        // --- results section ---
+        'Results Map': 'Peta Hasil',
+        'Statistics': 'Statistik',
+        'Land Cover Analysis': 'Analisis Tutupan Lahan',
+        'Distribution Chart': 'Grafik Distribusi',
+        'Export Results': 'Ekspor Hasil',
+        'Download Statistics': 'Unduh Statistik',
+        'Generate Report': 'Buat Laporan',
+        'Carbon Density Statistics': 'Statistik Densitas Karbon',
+        'Total Carbon Stock': 'Total Stok Karbon',
+        'Model Performance': 'Performa Model',
+        'Land Cover Transition': 'Peralihan Tutupan Lahan',
+        'Class Change Sankey': 'Sankey Perubahan Kelas',
+        'Largest Changes': 'Perubahan Terbesar',
+        'From': 'Dari',
+        'To': 'Ke',
+        'Stable vs Changed': 'Stabil vs Berubah',
+        'Net Gain/Loss per Class': 'Net Gain/Loss per Kelas',
+        'Year-over-Year Delta': 'Delta Antar Tahun',
+        // --- disaster module ---
+        'Module Under Development': 'Modul Sedang Dikembangkan',
+        'Flood Monitoring': 'Monitoring Banjir',
+        'Land Change Monitoring': 'Monitoring Perubahan Lahan',
+        'Coming Soon': 'Segera Hadir',
+        // --- about module ---
+        'Collaboration': 'Kolaborasi',
+        'Industry Collaboration Research Program': 'Riset Hilirisasi Program Ajakan Industri',
+        'Key Features': 'Fitur Utama',
+        'Vegetation Analysis': 'Analisis Vegetasi',
+        'Carbon Estimation': 'Estimasi Karbon',
+        'Technology': 'Teknologi',
+        'Quick Access': 'Akses Cepat',
+        'Start Analysis': 'Mulai Analisis',
+        'Read Guide': 'Baca Panduan',
+        // --- details module ---
+        'Research Program Details': 'Detail Program Penelitian',
+        'Research Team': 'Tim Peneliti',
+        'Name': 'Nama',
+        'Position': 'Jabatan',
+        'Affiliation': 'Afiliasi',
+        'Lead Researcher': 'Ketua Peneliti',
+        'Research Member': 'Anggota Peneliti',
+        'Industry Partner Team': 'Tim Mitra Industri',
+        'Research Output': 'Output Penelitian',
+        'Utility Model Patent': 'Paten Sederhana',
+        'Web Platform': 'Platform Web',
+        'Innovation Description': 'Deskripsi Inovasi',
+        'Research Methodology': 'Metodologi Penelitian',
+        'Active': 'Aktif',
+        'President Director': 'Direktur Utama',
+        'Data Acquisition': 'Akuisisi Data',
+        'Biomass Estimation': 'Estimasi Biomassa',
+        'Conversion & Output': 'Konversi & Output',
+        'Methodology Note:': 'Catatan Metodologi:',
+        // --- LC change module ---
+        'Land Cover Change Analysis': 'Analisis Perubahan Tutupan Lahan',
+        'Analysis Year': 'Tahun Analisis',
+        'Add Year': 'Tambah Tahun',
+        'Min 2 · Auto sorted': 'Minimal 2 · Urutan otomatis',
+        'No Results Yet': 'Belum Ada Hasil',
+        'Class transition flow': 'Aliran transisi kelas',
+        'Transition heatmap': 'Heatmap perpindahan',
+        'Gain & loss per class': 'Gain & loss per kelas',
+        'Multi-year evolution': 'Evolusi multi-tahun',
+        'Transition Matrix': 'Matriks Transisi',
+        'Change Summary (Selected Period)': 'Ringkasan Perubahan (Periode Terpilih)',
+        'Near real-time · Data available annually (2015+)': 'Near real-time · Data tersedia tiap tahun (2015+)',
+        '~1–2 min per year': '~1–2 menit per tahun',
+        'Each year = 1 request to backend': 'Setiap tahun = 1 request ke backend',
+        // --- guide module ---
+        'Complete Platform Usage Guide': 'Panduan Lengkap Penggunaan Platform',
+        'Getting Started': 'Memulai Analisis',
+        'Step 1: Selecting Area of Interest (AOI)': 'Langkah 1: Memilih Area of Interest (AOI)',
+        'Step 2: Selecting Analysis Type': 'Langkah 2: Memilih Jenis Analisis',
+        'Step 3: Setting Parameters': 'Langkah 3: Mengatur Parameter',
+        'Step 4: Running and Reading Results': 'Langkah 4: Menjalankan dan Membaca Hasil',
+        'Recommendation': 'Rekomendasi',
+        'Suitable for:': 'Cocok untuk:',
       }
     };
 
@@ -3093,6 +3410,73 @@
 
     function t(key) {
       return (I18N[currentLanguage] && I18N[currentLanguage][key]) || I18N.id[key] || key;
+    }
+
+    // ── Land cover class name translations (EN → ID) ───────────────
+    const LULC_CLASS_TRANSLATIONS = {
+      // Dynamic World (Google)
+      'Water': 'Air',
+      'Trees': 'Pohon',
+      'Grass': 'Rumput',
+      'Flooded vegetation': 'Vegetasi Tergenang',
+      'Crops': 'Lahan Pertanian',
+      'Shrub & Scrub': 'Semak Belukar',
+      'Built Area': 'Area Terbangun',
+      'Bare ground': 'Lahan Gundul',
+      'Snow & Ice': 'Salju & Es',
+      // ESA WorldCover
+      'Shrubland': 'Semak',
+      'Grassland': 'Padang Rumput',
+      'Cropland': 'Lahan Pertanian',
+      'Built-up': 'Terbangun',
+      'Barren/sparse vegetation': 'Lahan Gundul/Vegetasi Jarang',
+      'Snow and ice': 'Salju dan Es',
+      'Open water': 'Air Terbuka',
+      'Herbaceous wetland': 'Lahan Basah',
+      'Mangroves': 'Mangrove',
+      'Moss and lichen': 'Lumut',
+      // ESRI Land Cover
+      'Scrub/Shrub': 'Semak',
+      'Built area': 'Area Terbangun',
+      'Snow/Ice': 'Salju/Es',
+      'Clouds': 'Awan',
+      'Rangeland': 'Padang Penggembalaan',
+      // MODIS / generic
+      'Forest': 'Hutan',
+      'Urban': 'Perkotaan',
+      'Agriculture': 'Pertanian',
+      'Wetland': 'Lahan Basah',
+      'Savanna': 'Sabana',
+      'Barren': 'Lahan Gundul',
+      'Bare': 'Lahan Terbuka',
+      'Shrub': 'Semak',
+      'Evergreen Needleleaf Forests': 'Hutan Konifer Hijau',
+      'Evergreen Broadleaf Forests': 'Hutan Berdaun Lebar Hijau',
+      'Deciduous Needleleaf Forests': 'Hutan Konifer Gugur',
+      'Deciduous Broadleaf Forests': 'Hutan Berdaun Lebar Gugur',
+      'Mixed Forests': 'Hutan Campuran',
+      'Closed Shrublands': 'Semak Tertutup',
+      'Open Shrublands': 'Semak Terbuka',
+      'Woody Savannas': 'Sabana Berkayu',
+      'Savannas': 'Sabana',
+      'Permanent Wetlands': 'Lahan Basah Permanen',
+      'Croplands': 'Lahan Pertanian',
+      'Urban and Built-up Lands': 'Perkotaan dan Lahan Terbangun',
+      'Cropland/Natural Vegetation Mosaics': 'Mosaik Pertanian/Vegetasi Alami',
+      'Permanent Snow and Ice': 'Salju dan Es Permanen',
+      'Barren Land': 'Lahan Gundul',
+      'Water Bodies': 'Badan Air',
+      'Non-Forest': 'Non-Hutan',
+      'Non Forest': 'Non-Hutan',
+    };
+
+    function translateLulcClass(name) {
+      if (currentLanguage !== 'id') return name;
+      return LULC_CLASS_TRANSLATIONS[name] || name;
+    }
+
+    function lcChangeText(idText, enText) {
+      return currentLanguage === 'en' ? (enText || idText) : idText;
     }
 
     function translateExactTextNodes(root = document.body) {
@@ -3140,6 +3524,30 @@
 
       translateExactTextNodes();
       updateAdminNavbarButton();
+      rerenderLulcCharts();
+    }
+
+    function rerenderLulcCharts() {
+      // Re-render Carbon module land cover tables + pie charts
+      if (analysisResults && analysisResults.landcover &&
+          typeof renderLandCoverTableAndChart === 'function') {
+        Object.keys(analysisResults.landcover).forEach(datasetKey => {
+          const bucket = analysisResults.landcover[datasetKey];
+          if (bucket && bucket.classes) {
+            const label = bucket.dataset_name || datasetKey.replace(/_/g, ' ');
+            renderLandCoverTableAndChart(datasetKey, label);
+          }
+        });
+        if (analysisResults.landcover_transition &&
+            typeof renderLandCoverTransition === 'function') {
+          renderLandCoverTransition();
+        }
+      }
+      // Re-render LCChange module charts
+      if (typeof LCChange !== 'undefined' &&
+          LCChange.activeYears && LCChange.activeYears.length >= 2) {
+        LCChange._renderAll(LCChange.activeYears);
+      }
     }
 
     function initializeLanguageSelector() {
@@ -3151,9 +3559,52 @@
       applyLanguage(currentLanguage);
     }
 
+    function positionLanguageDropdown() {
+      const button = document.getElementById('languageDropdownBtn');
+      const menu = document.querySelector('.language-menu[aria-labelledby="languageDropdownBtn"]');
+      if (!button || !menu || !menu.classList.contains('show')) return;
+
+      const buttonRect = button.getBoundingClientRect();
+      const menuWidth = Math.max(menu.offsetWidth || 160, 160);
+      const gap = 6;
+      const viewportPadding = 8;
+      const left = Math.min(
+        Math.max(buttonRect.left, viewportPadding),
+        window.innerWidth - menuWidth - viewportPadding
+      );
+
+      menu.style.setProperty('left', `${left}px`, 'important');
+      menu.style.setProperty('top', 'auto', 'important');
+      menu.style.setProperty('right', 'auto', 'important');
+      menu.style.setProperty('bottom', `${Math.max(window.innerHeight - buttonRect.top + gap, viewportPadding)}px`, 'important');
+      menu.style.setProperty('min-width', '160px', 'important');
+      menu.style.setProperty('z-index', '10000', 'important');
+    }
+
+    function initializeLanguageDropdownPositioning() {
+      const dropdown = document.querySelector('.language-dropdown');
+      const menu = dropdown?.querySelector('.language-menu');
+      if (!dropdown) return;
+
+      dropdown.addEventListener('show.bs.dropdown', () => {
+        if (menu && menu.parentElement !== document.body) {
+          document.body.appendChild(menu);
+        }
+      });
+      dropdown.addEventListener('shown.bs.dropdown', positionLanguageDropdown);
+      dropdown.addEventListener('hide.bs.dropdown', () => {
+        if (menu && menu.parentElement === document.body) {
+          dropdown.appendChild(menu);
+        }
+      });
+      window.addEventListener('resize', positionLanguageDropdown);
+      window.addEventListener('scroll', positionLanguageDropdown, true);
+    }
+
     $(document).ready(async function () {
       console.log('🚀 Initializing GEE Analysis Platform...');
       initializeLanguageSelector();
+      initializeLanguageDropdownPositioning();
       await AppConfig.ready(API_BASE_URL);
       registerConfigBindings();
       AppConfig.applyToUI();
@@ -3644,7 +4095,7 @@
 
         // 4) Hitung area dsb.
         const bounds = geoJsonLayer.getBounds();
-        const area = calculateAreaFromBounds(bounds);
+        const area = calculateAreaFromGeoJSON(geojson) || calculateAreaFromBounds(bounds);
 
         currentAOI = {
           type: 'admin',
@@ -3953,7 +4404,7 @@
           type: 'coordinate',
           name: `Point (${lat.toFixed(4)}, ${lon.toFixed(4)})`,
           geometry: polygon.getBounds(),
-          area: calculateAreaFromBounds(polygon.getBounds()),
+          area: calculateAreaFromGeoJSON(geojson) || calculateAreaFromBounds(polygon.getBounds()),
           geojson: geojson,  // ✅ GeoJSON persegi untuk clipping di backend
         };
 
@@ -3979,8 +4430,7 @@
       // layer.toGeoJSON() mengembalikan Feature dengan geometry Polygon/Rectangle
       const geojson = layer.toGeoJSON();
 
-      // Hitung area dari GeoJSON (lebih akurat untuk polygon tidak persegi)
-      const area = calculateAreaFromBounds(bounds);
+      const area = calculateAreaFromGeoJSON(geojson) || calculateAreaFromBounds(bounds);
 
       currentAOI = {
         type: 'drawn',
@@ -3999,6 +4449,66 @@
       const latDiff = Math.abs(bounds.getSouth() - bounds.getNorth());
       const lonDiff = Math.abs(bounds.getWest() - bounds.getEast());
       return (latDiff * 111 * lonDiff * 111 * Math.cos(bounds.getCenter().lat * Math.PI / 180)).toFixed(2);
+    }
+
+    function calculateAreaFromGeoJSON(geojson) {
+      if (!geojson) return null;
+
+      const earthRadius = 6378137;
+      const toRadians = degrees => degrees * Math.PI / 180;
+
+      function ringArea(ring) {
+        if (!Array.isArray(ring) || ring.length < 3) return 0;
+
+        let area = 0;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+          const current = ring[i];
+          const previous = ring[j];
+          if (!current || !previous) continue;
+
+          const lonDelta = toRadians(current[0] - previous[0]);
+          const currentLat = toRadians(current[1]);
+          const previousLat = toRadians(previous[1]);
+          area += lonDelta * (2 + Math.sin(previousLat) + Math.sin(currentLat));
+        }
+        return area * earthRadius * earthRadius / 2;
+      }
+
+      function geometryArea(geometry) {
+        if (!geometry) return 0;
+
+        if (geometry.type === 'Polygon') {
+          const rings = geometry.coordinates || [];
+          if (!rings.length) return 0;
+
+          const outer = Math.abs(ringArea(rings[0]));
+          const holes = rings.slice(1).reduce((sum, ring) => sum + Math.abs(ringArea(ring)), 0);
+          return Math.max(outer - holes, 0);
+        }
+
+        if (geometry.type === 'MultiPolygon') {
+          return (geometry.coordinates || []).reduce((sum, polygon) => (
+            sum + geometryArea({ type: 'Polygon', coordinates: polygon })
+          ), 0);
+        }
+
+        if (geometry.type === 'GeometryCollection') {
+          return (geometry.geometries || []).reduce((sum, child) => sum + geometryArea(child), 0);
+        }
+
+        return 0;
+      }
+
+      let areaM2 = 0;
+      if (geojson.type === 'FeatureCollection') {
+        areaM2 = (geojson.features || []).reduce((sum, feature) => sum + geometryArea(feature.geometry), 0);
+      } else if (geojson.type === 'Feature') {
+        areaM2 = geometryArea(geojson.geometry);
+      } else {
+        areaM2 = geometryArea(geojson);
+      }
+
+      return areaM2 > 0 ? (areaM2 / 1000000).toFixed(2) : null;
     }
 
     function showAOIInfo() {
@@ -5293,7 +5803,7 @@
       <tr>
         <td>
           <span style="display: inline-block; width: 12px; height: 12px; background-color: ${info.color}; margin-right: 5px; border: 1px solid #ccc;"></span>
-          <strong>${name}</strong>
+          <strong>${translateLulcClass(name)}</strong>
         </td>
         <td>${areaFormatted}</td>
         <td>
@@ -5337,7 +5847,7 @@
       }
 
       // Prepare chart data
-      const labels = sorted.map(([name]) => name);
+      const labels = sorted.map(([name]) => translateLulcClass(name));
       const values = sorted.map(([, info]) => Number(info.area || 0));
       const colors = sorted.map(([, info]) => info.color || '#999');
 
@@ -5452,8 +5962,8 @@
       const tableFlows = (changedFlows.length ? changedFlows : pair.flows).slice(0, 12);
       $('#transitionFlowTable').html(tableFlows.map(flow => `
         <tr>
-          <td><span style="display:inline-block;width:10px;height:10px;background:${flow.from_color};margin-right:4px;border:1px solid #ccc;"></span>${flow.from}</td>
-          <td><span style="display:inline-block;width:10px;height:10px;background:${flow.to_color};margin-right:4px;border:1px solid #ccc;"></span>${flow.to}</td>
+          <td><span style="display:inline-block;width:10px;height:10px;background:${flow.from_color};margin-right:4px;border:1px solid #ccc;"></span>${translateLulcClass(flow.from)}</td>
+          <td><span style="display:inline-block;width:10px;height:10px;background:${flow.to_color};margin-right:4px;border:1px solid #ccc;"></span>${translateLulcClass(flow.to)}</td>
           <td class="text-end">${Number(flow.area || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
         </tr>
       `).join('') || '<tr><td colspan="3" class="text-muted text-center">Tidak ada perubahan terdeteksi</td></tr>');
@@ -5516,7 +6026,7 @@
         return `
           <path d="M ${source.x + nodeW} ${sy} C ${source.x + 150} ${sy}, ${target.x - 150} ${ty}, ${target.x} ${ty}"
                 fill="none" stroke="${flow.from_color}" stroke-width="${stroke}" stroke-opacity="0.42">
-            <title>${flow.from} -> ${flow.to}: ${Number(flow.area).toLocaleString()} ha (${flow.percentage}%)</title>
+            <title>${translateLulcClass(flow.from)} -> ${translateLulcClass(flow.to)}: ${Number(flow.area).toLocaleString()} ha (${flow.percentage}%)</title>
           </path>`;
       }).join('');
 
@@ -5524,7 +6034,7 @@
         return Object.values(nodes).map(node => `
           <rect x="${node.x}" y="${node.y}" width="${nodeW}" height="${node.h}" rx="3" fill="${side === 'left' ? '#2f855a' : '#2563eb'}"></rect>
           <text x="${side === 'left' ? node.x - 8 : node.x + nodeW + 8}" y="${node.y + node.h / 2 + 4}"
-                text-anchor="${side === 'left' ? 'end' : 'start'}" font-size="12" fill="#263238">${node.name}</text>
+                text-anchor="${side === 'left' ? 'end' : 'start'}" font-size="12" fill="#263238">${translateLulcClass(node.name)}</text>
         `).join('');
       }
 
@@ -5573,7 +6083,7 @@
         charts.lulcTransitionNet = new Chart(netCtx, {
           type: 'bar',
           data: {
-            labels: net.map(item => item.class),
+            labels: net.map(item => translateLulcClass(item.class)),
             datasets: [{
               label: 'Net Gain/Loss (ha)',
               data: net.map(item => item.net),
@@ -6699,8 +7209,8 @@
         const n = allClasses.length;
 
         const labels = [
-          ...allClasses.map(c => `${c}\n(${yearA})`),
-          ...allClasses.map(c => `${c}\n(${yearB})`),
+          ...allClasses.map(c => `${translateLulcClass(c)}\n(${yearA})`),
+          ...allClasses.map(c => `${translateLulcClass(c)}\n(${yearB})`),
         ];
         const nodeColors = [
           ...allClasses.map(c => this._color(c, ds)),
@@ -6730,7 +7240,7 @@
             line: { color: 'rgba(0,0,0,0.08)', width: 0.5 },
             label: labels,
             color: nodeColors,
-            hovertemplate: '<b>%{label}</b><br>Total: %{value:,.1f} ha<extra></extra>',
+            hovertemplate: `<b>%{label}</b><br>${lcChangeText('Total', 'Total')}: %{value:,.1f} ha<extra></extra>`,
           },
           link: {
             source: sources,
@@ -6760,8 +7270,8 @@
           type: 'heatmap',
           z, text,
           texttemplate: '%{text}',
-          x: allClasses.map(c => `→ ${c}`),
-          y: allClasses.map(c => `${c} →`),
+          x: allClasses.map(c => `→ ${translateLulcClass(c)}`),
+          y: allClasses.map(c => `${translateLulcClass(c)} →`),
           colorscale: [
             [0, '#f7fbff'], [0.05, '#c6dbef'],
             [0.2, '#6baed6'], [0.5, '#2171b5'], [1, '#084594'],
@@ -6772,8 +7282,8 @@
         }], {
           paper_bgcolor: 'rgba(0,0,0,0)',
           plot_bgcolor: 'rgba(0,0,0,0)',
-          xaxis: { title: `Kelas ${yearB}`, tickangle: -35, automargin: true },
-          yaxis: { title: `Kelas ${yearA}`, autorange: 'reversed', automargin: true },
+          xaxis: { title: `${lcChangeText('Kelas', 'Class')} ${yearB}`, tickangle: -35, automargin: true },
+          yaxis: { title: `${lcChangeText('Kelas', 'Class')} ${yearA}`, autorange: 'reversed', automargin: true },
           margin: { l: 10, r: 80, t: 20, b: 10 },
           font: { family: 'Montserrat, sans-serif', size: 11 },
         }, { responsive: true, displayModeBar: false });
@@ -6803,7 +7313,7 @@
           type: 'bar',
           orientation: 'h',
           x: rows.map(d => +d.change.toFixed(1)),
-          y: rows.map(d => d.cls),
+          y: rows.map(d => translateLulcClass(d.cls)),
           marker: { color: colors, line: { width: 0 } },
           text: rows.map(d => fmt(d.change)),
           textposition: 'outside',
@@ -6811,14 +7321,14 @@
           customdata: rows.map(d => [d.aA.toFixed(1), d.aB.toFixed(1), yearA, yearB]),
           hovertemplate:
             '<b>%{y}</b><br>' +
-            'Perubahan: <b>%{x:+,.1f} ha</b><br>' +
+            `${lcChangeText('Perubahan', 'Change')}: <b>%{x:+,.1f} ha</b><br>` +
             '%{customdata[2]}: %{customdata[0]} ha<br>' +
             '%{customdata[3]}: %{customdata[1]} ha<extra></extra>',
         }], {
           paper_bgcolor: 'rgba(0,0,0,0)',
           plot_bgcolor: 'rgba(0,0,0,0)',
           xaxis: {
-            title: 'Perubahan Luas (ha)',
+            title: `${lcChangeText('Perubahan Luas', 'Area Change')} (ha)`,
             zeroline: true, zerolinecolor: '#555', zerolinewidth: 2,
             gridcolor: 'rgba(0,0,0,0.06)',
           },
@@ -6834,33 +7344,38 @@
 
         const allClasses = new Set();
         years.forEach(y => Object.keys(this.yearData[y]?.classes || {}).forEach(c => allClasses.add(c)));
+        const totals = years.map(y => +(this.yearData[y]?.total_area_ha || 0));
+        const positiveTotals = totals.filter(v => v > 0);
+        const minTotal = positiveTotals.length ? Math.min(...positiveTotals) : 0;
+        const maxTotal = positiveTotals.length ? Math.max(...positiveTotals) : 0;
+        const areaVarianceHigh = minTotal > 0 && (maxTotal / minTotal) > 1.1;
 
         const traces = [...allClasses].map(cls => {
           const color = this._color(cls, ds);
           return {
             type: 'scatter',
             mode: 'lines+markers',
-            name: cls,
+            name: translateLulcClass(cls),
             x: years,
             y: years.map(y => +(this.yearData[y]?.classes?.[cls]?.area || 0).toFixed(1)),
             stackgroup: 'all',
             fillcolor: this._hexRgba(color, 0.6),
-            line: { color, width: 1.8, shape: 'spline' },
+            line: { color, width: 1.8, shape: 'linear' },
             marker: { size: 5, color },
-            hovertemplate: `<b>${cls}</b><br>%{x}: %{y:,.1f} ha<extra></extra>`,
+            hovertemplate: `<b>${translateLulcClass(cls)}</b><br>%{x}: %{y:,.1f} ha<extra></extra>`,
           };
         });
 
-        Plotly.newPlot('lcTimeSeriesChart', traces, {
+        const layout = {
           paper_bgcolor: 'rgba(0,0,0,0)',
           plot_bgcolor: 'rgba(0,0,0,0)',
           xaxis: {
-            title: 'Tahun',
+            title: lcChangeText('Tahun', 'Year'),
             tickmode: 'array', tickvals: years,
             gridcolor: 'rgba(0,0,0,0.06)',
           },
           yaxis: {
-            title: 'Luas (ha)',
+            title: `${lcChangeText('Luas', 'Area')} (ha)`,
             gridcolor: 'rgba(0,0,0,0.06)',
           },
           showlegend: true,
@@ -6868,7 +7383,28 @@
           hovermode: 'x unified',
           margin: { l: 70, r: 20, t: 60, b: 55 },
           font: { family: 'Montserrat, sans-serif', size: 11 },
-        }, { responsive: true, displayModeBar: false });
+        };
+
+        if (areaVarianceHigh) {
+          layout.annotations = [{
+            text: lcChangeText(
+              'Catatan: total area antar tahun berbeda >10%; cek cakupan dataset/AOI.',
+              'Note: total area differs by >10% between years; check dataset coverage/AOI.'
+            ),
+            xref: 'paper',
+            yref: 'paper',
+            x: 0,
+            y: 1.14,
+            showarrow: false,
+            align: 'left',
+            font: { size: 11, color: '#b45309' },
+            bgcolor: 'rgba(255, 247, 237, 0.92)',
+            bordercolor: 'rgba(251, 146, 60, 0.7)',
+            borderpad: 4,
+          }];
+        }
+
+        Plotly.newPlot('lcTimeSeriesChart', traces, layout, { responsive: true, displayModeBar: false });
       },
 
       // ── Summary Table ──────────────────────────────────────────
@@ -6890,7 +7426,7 @@
             <td>
               <span style="display:inline-block;width:10px;height:10px;
                 background:${col};border-radius:2px;margin-right:5px;"></span>
-              ${cls}
+              ${translateLulcClass(cls)}
             </td>
             <td class="${css} fw-bold">${sign}${fmtA(val)} ha</td>
             <td class="text-muted">${fmtPct(val)}%</td>
@@ -6915,26 +7451,26 @@
         const insightHtml = bigVal > 0.5 ? `
       <div class="alert alert-secondary mt-3 py-2" style="font-size:.85rem;">
         <i class="fas fa-lightbulb text-warning"></i>
-        <strong>Transisi terbesar (estimasi):</strong>
-        ${bigFrom} → ${bigTo}: <strong>${fmtA(bigVal)} ha</strong>
+        <strong>${lcChangeText('Transisi terbesar (estimasi):', 'Largest transition (estimate):')}</strong>
+        ${translateLulcClass(bigFrom)} → ${translateLulcClass(bigTo)}: <strong>${fmtA(bigVal)} ha</strong>
       </div>` : '';
 
         document.getElementById('lcChangeSummaryContent').innerHTML = `
       <div class="row">
         <div class="col-md-6">
-          <h6 class="text-success mb-2"><i class="fas fa-arrow-up"></i> Kelas Bertambah</h6>
+          <h6 class="text-success mb-2"><i class="fas fa-arrow-up"></i> ${lcChangeText('Kelas Bertambah', 'Classes Increased')}</h6>
           <table class="table table-sm table-hover mb-0">
             <thead class="table-success"><tr>
-              <th>Kelas</th><th>Perubahan</th><th>% Total</th>
+              <th>${lcChangeText('Kelas', 'Class')}</th><th>${lcChangeText('Perubahan', 'Change')}</th><th>% Total</th>
             </tr></thead>
             <tbody>${gainRows}</tbody>
           </table>
         </div>
         <div class="col-md-6">
-          <h6 class="text-danger mb-2"><i class="fas fa-arrow-down"></i> Kelas Berkurang</h6>
+          <h6 class="text-danger mb-2"><i class="fas fa-arrow-down"></i> ${lcChangeText('Kelas Berkurang', 'Classes Decreased')}</h6>
           <table class="table table-sm table-hover mb-0">
             <thead class="table-danger"><tr>
-              <th>Kelas</th><th>Perubahan</th><th>% Total</th>
+              <th>${lcChangeText('Kelas', 'Class')}</th><th>${lcChangeText('Perubahan', 'Change')}</th><th>% Total</th>
             </tr></thead>
             <tbody>${lossRows}</tbody>
           </table>
