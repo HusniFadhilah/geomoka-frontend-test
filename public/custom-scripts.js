@@ -28,6 +28,9 @@ function switchModule(moduleName) {
     $(`#menu-${moduleName}`).addClass('active');
     $('#mainSidebar').removeClass('mobile-open');
     localStorage.setItem('currentModule', moduleName);
+    if (typeof window.onModuleShown === 'function') {
+        window.onModuleShown(moduleName);
+    }
     console.log(`✅ Module: ${moduleName}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }

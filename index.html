@@ -152,10 +152,11 @@
       <div class="spinner"></div>
       <h5 id="loadingText" data-i18n="loading.processing">Memproses data...</h5>
       <p class="text-muted" id="loadingSubtext" data-i18n="loading.wait">Mohon tunggu</p>
-      <div class="progress mt-3" style="width: 300px;">
+      <div class="progress loading-progress-track mt-3">
         <div class="progress-bar progress-bar-striped progress-bar-animated" id="loadingProgress" role="progressbar"
-          style="width: 0%"></div>
+          aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="width: 0%"></div>
       </div>
+      <div class="small text-muted mt-2" id="loadingProgressLabel">Estimasi tahap proses</div>
     </div>
   </div>
 
@@ -298,7 +299,7 @@
           <div class="text-center mb-4">
             <h3 class="fw-bold mb-1">
               <i class="bi bi-tree-fill text-success"></i>
-              <span data-i18n="home.title">Platform Analitik Citra AI</span>
+              <span data-i18n="home.title">Platform Analitik Citra Berbasis AI</span>
             </h3>
             <p class="text-muted mb-0" data-i18n="home.subtitle">
               Platform estimasi karbon & vegetasi berbasis AI (Sentinel-2 & Google Earth Engine)
@@ -780,6 +781,8 @@
                           <option value="Copernicus_LandCover">Copernicus Global Land Cover</option>
                           <option value="ESA_GlobCover">ESA GlobCover 2009</option>
                           <option value="JAXA_FNF">JAXA ALOS Forest/Non-Forest</option>
+                          <option value="JAXA_FNF4">JAXA PALSAR FNF 4-class</option>
+                          <option value="MapBiomas_Indonesia">MapBiomas Indonesia LANDY</option>
                         </select>
                         <small class="text-muted">Dataset yang sama akan dibandingkan antar tahun</small>
                       </div>
@@ -1273,38 +1276,68 @@
                   <i class="fas fa-exclamation-triangle"></i> Pemetaan Bencana
                 </div>
                 <div class="card-body">
-                  <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i>
-                    <strong>Module Under Development</strong>
-                    <p class="mb-0 mt-2">
-                      Fitur Pemetaan Bencana sedang dalam tahap pengembangan.
-                      Fitur ini akan mencakup:
-                    </p>
-                    <ul class="mt-2 mb-0">
-                      <li>Monitoring dan pemetaan area terdampak banjir</li>
-                      <li>Monitoring perubahan lahan pasca bencana</li>
-                    </ul>
-                  </div>
-
-                  <!-- Placeholder for disaster mapping features -->
-                  <div class="row mt-4">
-                    <div class="col-md-6">
-                      <div class="card">
-                        <div class="card-body text-center">
-                          <i class="fas fa-water fa-3x text-info mb-3"></i>
-                          <h5>Flood Monitoring</h5>
-                          <p class="text-muted">Coming Soon</p>
-                        </div>
+                  <div class="alert alert-info d-flex align-items-start gap-2">
+                    <i class="fas fa-triangle-exclamation mt-1"></i>
+                    <div>
+                      <strong>Pemetaan bencana berbasis observasi citra.</strong>
+                      <div class="small">
+                        Modul ini memetakan area terindikasi terdampak dari data sebelum/sesudah kejadian,
+                        bukan prediksi risiko. Validasi lapangan dan laporan resmi tetap diperlukan.
                       </div>
                     </div>
-                    <div class="col-md-6">
-                      <div class="card">
-                        <div class="card-body text-center">
-                          <i class="fas fa-fire fa-3x text-danger mb-3"></i>
-                          <h5>Land Change Monitoring</h5>
-                          <p class="text-muted">Coming Soon</p>
+                  </div>
+
+                  <div class="row g-3">
+                    <div class="col-lg-3">
+                      <div class="sidebar h-100">
+                        <h5 class="mb-3"><i class="fas fa-sliders"></i> Pengaturan</h5>
+                        <div id="disasterAoiStatus" class="alert alert-warning py-2" style="font-size:.82rem;">
+                          <i class="fas fa-exclamation-triangle"></i> Belum ada AOI. Pilih AOI di modul Analisis Stok Karbon.
                         </div>
+
+                        <div class="mb-3">
+                          <label class="form-label fw-bold" for="disasterType">Jenis Bencana</label>
+                          <select class="form-select" id="disasterType">
+                            <option value="flood">Banjir</option>
+                            <option value="fire">Kebakaran Lahan</option>
+                            <option value="landslide">Longsor</option>
+                          </select>
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">Periode Sebelum Kejadian</label>
+                          <input type="date" class="form-control form-control-sm mb-2" id="disasterBeforeStart">
+                          <input type="date" class="form-control form-control-sm" id="disasterBeforeEnd">
+                        </div>
+
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">Periode Sesudah Kejadian</label>
+                          <input type="date" class="form-control form-control-sm mb-2" id="disasterAfterStart">
+                          <input type="date" class="form-control form-control-sm" id="disasterAfterEnd">
+                          <small class="text-muted">Gunakan rentang setelah kejadian yang benar-benar terjadi.</small>
+                        </div>
+
+                        <button class="btn btn-success w-100 fw-bold" onclick="DisasterMapping.run()">
+                          <i class="fas fa-map-location-dot"></i> Deteksi Area Terdampak
+                        </button>
+                        <button class="btn btn-outline-primary w-100 mt-2" onclick="DisasterMapping.loadOfficialSources()">
+                          <i class="fas fa-database"></i> Muat Sumber Resmi
+                        </button>
+                        <button class="btn btn-outline-info w-100 mt-2" onclick="DisasterMapping.loadBmkgAlerts()">
+                          <i class="fas fa-cloud-showers-heavy"></i> Peringatan BMKG
+                        </button>
+                        <button class="btn btn-outline-secondary w-100 mt-2" onclick="DisasterMapping.loadDemSlope()">
+                          <i class="fas fa-mountain"></i> Layer Kemiringan DEM
+                        </button>
                       </div>
+                    </div>
+
+                    <div class="col-lg-9">
+                      <div id="disasterOfficialSources" class="mb-3"></div>
+                      <div id="disasterAlerts" class="mb-3"></div>
+                      <div id="disasterSummary" class="row g-2 mb-3"></div>
+                      <div id="disasterMap" style="height:560px;border-radius:8px;overflow:hidden;"></div>
+                      <div id="disasterLegend" class="mt-2 d-flex flex-wrap gap-3" style="font-size:.85rem;"></div>
                     </div>
                   </div>
                 </div>
@@ -1708,6 +1741,9 @@
                     <option value="Dynamic_World">Dynamic World (Google, 10m)</option>
                     <option value="ESA_WorldCover">ESA WorldCover (10m)</option>
                     <option value="ESRI_LandCover">ESRI Land Cover (10m)</option>
+                    <option value="MapBiomas_Indonesia">MapBiomas Indonesia LANDY (30m)</option>
+                    <option value="JAXA_FNF4">JAXA PALSAR FNF 4-class (25m)</option>
+                    <option value="JAXA_FNF">JAXA ALOS FNF (25m)</option>
                   </select>
                   <small class="text-muted d-block mt-1" id="lcDatasetNote">
                     Near real-time · Data tersedia tiap tahun (2015+)
@@ -1871,6 +1907,18 @@
                           <i class="fas fa-chart-area"></i> Time Series
                         </a>
                       </li>
+                      <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#lcTabChangeMap"
+                          onclick="LCChange.resizeChangeMap()">
+                          <i class="fas fa-map-location-dot"></i> Peta Perubahan
+                        </a>
+                      </li>
+                      <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#lcTabYearMaps"
+                          onclick="LCChange.resizeOriginalMap()">
+                          <i class="fas fa-map"></i> Peta Tahunan
+                        </a>
+                      </li>
                     </ul>
                   </div>
                   <div class="card-body pt-3">
@@ -1912,6 +1960,59 @@
                           Area stacked seluruh tahun yang dianalisis · Hover untuk detail tiap kelas
                         </p>
                         <div id="lcTimeSeriesChart" style="height:460px;"></div>
+                      </div>
+
+                      <!-- Change Map -->
+                      <div class="tab-pane fade" id="lcTabChangeMap">
+                        <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                          <p class="text-muted mb-0 me-auto" style="font-size:.8rem;">
+                            <i class="fas fa-info-circle"></i>
+                            Overlay merah = area berubah Â· Mode kelas tujuan mewarnai piksel berubah berdasarkan kelas
+                            tahun akhir
+                          </p>
+                          <div class="btn-group btn-group-sm" role="group" aria-label="Mode peta perubahan">
+                            <button type="button" class="btn btn-outline-success active" id="lcChangeMapModeChanged"
+                              onclick="LCChange.setChangeMapMode('changed')">
+                              <i class="fas fa-highlighter"></i> Area Berubah
+                            </button>
+                            <button type="button" class="btn btn-outline-success" id="lcChangeMapModeDestination"
+                              onclick="LCChange.setChangeMapMode('destination')">
+                              <i class="fas fa-layer-group"></i> Kelas Tujuan
+                            </button>
+                            <button type="button" class="btn btn-outline-success" id="lcChangeMapModeBefore"
+                              onclick="LCChange.setChangeMapMode('before')">
+                              <i class="fas fa-map"></i> Tahun Awal
+                            </button>
+                            <button type="button" class="btn btn-outline-success" id="lcChangeMapModeAfter"
+                              onclick="LCChange.setChangeMapMode('after')">
+                              <i class="fas fa-map-marked-alt"></i> Tahun Akhir
+                            </button>
+                          </div>
+                        </div>
+                        <div id="lcChangeMapStatus" class="alert alert-info py-2 mb-2" style="font-size:.82rem;">
+                          Memuat peta perubahan...
+                        </div>
+                        <div id="lcChangeMap" style="height:520px;border-radius:8px;overflow:hidden;"></div>
+                        <div id="lcChangeMapLegend" class="mt-2 d-flex flex-wrap gap-3" style="font-size:.82rem;"></div>
+                      </div>
+
+                      <!-- Original Year Maps -->
+                      <div class="tab-pane fade" id="lcTabYearMaps">
+                        <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                          <p class="text-muted mb-0 me-auto" style="font-size:.8rem;">
+                            <i class="fas fa-info-circle"></i>
+                            Peta LULC asli untuk masing-masing tahun yang dipilih pada analisis.
+                          </p>
+                          <label class="form-label mb-0 small fw-semibold" for="lcOriginalYearSelect">Tahun</label>
+                          <select class="form-select form-select-sm" id="lcOriginalYearSelect" style="max-width:150px;"
+                            onchange="LCChange.showOriginalYearMap(parseInt(this.value))"></select>
+                        </div>
+                        <div id="lcOriginalMapStatus" class="alert alert-info py-2 mb-2" style="font-size:.82rem;">
+                          Pilih tahun untuk menampilkan peta asli.
+                        </div>
+                        <div id="lcOriginalYearMap" style="height:520px;border-radius:8px;overflow:hidden;"></div>
+                        <div id="lcOriginalMapLegend" class="mt-2 d-flex flex-wrap gap-3" style="font-size:.82rem;">
+                        </div>
                       </div>
 
                     </div>
@@ -2647,8 +2748,8 @@
     // Configuration - will be replaced by Vite during build
     const config = {
       api: {
-        baseUrl: 'https://backend.geomoka.husnifd.my.id/api'  // Will be replaced by Vite
-        //baseUrl: 'http://localhost:5000/api'  // Will be replaced by Vite
+        //baseUrl: 'https://backend.geomoka.husnifd.my.id/api'  // Will be replaced by Vite
+        baseUrl: 'http://localhost:5000/api'  // Will be replaced by Vite
       },
       env: 'development',
       appTitle: 'GEOSAVE'
@@ -2682,6 +2783,7 @@
       carbonDeltaYoY: null
     };
     let legendControl = null;
+    let activeResultLayerName = null;
     let provinceSelect, citySelect, districtSelect, villageSelect
     charts.landcoverPie = null;
     let processStartTime = null;
@@ -2940,6 +3042,35 @@
         });
       }
 
+      async analyzeLandCoverChangeMap(params) {
+        return await this.request('/analyze/landcover-change-map', {
+          method: 'POST',
+          data: params
+        });
+      }
+
+      async getDisasterSources() {
+        return await this.request('/disaster/sources');
+      }
+
+      async getBmkgAlerts(limit = 30) {
+        return await this.request(`/disaster/bmkg-alerts?limit=${encodeURIComponent(limit)}`);
+      }
+
+      async analyzeDemSlope(params) {
+        return await this.request('/disaster/dem-slope', {
+          method: 'POST',
+          data: params
+        });
+      }
+
+      async analyzeDisasterEvent(params) {
+        return await this.request('/disaster/event-map', {
+          method: 'POST',
+          data: params
+        });
+      }
+
       async analyzeCarbon(params) {
         return await this.request('/analyze/carbon', {
           method: 'POST',
@@ -3050,7 +3181,7 @@
         'sidebar.about': 'Tentang Program',
         'sidebar.details': 'Detail Program',
         'sidebar.language': 'Bahasa',
-        'home.title': 'Platform Analitik Citra AI',
+        'home.title': 'Platform Analitik Citra Berbasis AI',
         'home.subtitle': 'Platform estimasi karbon & vegetasi berbasis AI (Sentinel-2 & Google Earth Engine)',
       },
       en: {
@@ -3238,6 +3369,10 @@
         'Evolusi multi-tahun': 'Multi-year evolution',
         'Matriks Transisi': 'Transition Matrix',
         'Ringkasan Perubahan (Periode Terpilih)': 'Change Summary (Selected Period)',
+        'Peta Perubahan': 'Change Map',
+        'Area Berubah': 'Changed Area',
+        'Kelas Tujuan': 'Destination Class',
+        'Memuat peta perubahan...': 'Loading change map...',
         'Near real-time · Data tersedia tiap tahun (2015+)': 'Near real-time · Data available annually (2015+)',
         '~1–2 menit per tahun': '~1–2 min per year',
         'Setiap tahun = 1 request ke backend': 'Each year = 1 request to backend',
@@ -3391,6 +3526,10 @@
         'Multi-year evolution': 'Evolusi multi-tahun',
         'Transition Matrix': 'Matriks Transisi',
         'Change Summary (Selected Period)': 'Ringkasan Perubahan (Periode Terpilih)',
+        'Change Map': 'Peta Perubahan',
+        'Changed Area': 'Area Berubah',
+        'Destination Class': 'Kelas Tujuan',
+        'Loading change map...': 'Memuat peta perubahan...',
         'Near real-time · Data available annually (2015+)': 'Near real-time · Data tersedia tiap tahun (2015+)',
         '~1–2 min per year': '~1–2 menit per tahun',
         'Each year = 1 request to backend': 'Setiap tahun = 1 request ke backend',
@@ -3424,9 +3563,30 @@
       'Built Area': 'Area Terbangun',
       'Bare ground': 'Lahan Gundul',
       'Snow & Ice': 'Salju & Es',
+      // Indonesia / forest-carbon focused datasets
+      'Dense Forest': 'Hutan Rapat',
+      'Non-Dense Forest': 'Hutan Tidak Rapat',
+      'Forest Formation': 'Formasi Hutan',
+      'Peat Swamp Forest': 'Hutan Rawa Gambut',
+      'Non-Forest Natural Formation': 'Formasi Alam Non-Hutan',
+      'Other Non-Forest Natural Vegetation': 'Vegetasi Alam Non-Hutan Lainnya',
+      'Rice Paddy': 'Sawah',
+      'Oil Palm': 'Sawit',
+      'Pulpwood Plantation': 'Hutan Tanaman Industri',
+      'Other Agriculture': 'Pertanian Lainnya',
+      'Non-Vegetated Area': 'Area Non-Vegetasi',
+      'Mining Pit': 'Tambang',
+      'Urban Area': 'Area Perkotaan',
+      'Other Non-Vegetation': 'Non-Vegetasi Lainnya',
+      'Water Body': 'Badan Air',
+      'Aquaculture': 'Akuakultur/Tambak',
+      'River, Lake, Ocean': 'Sungai, Danau, Laut',
+      'Not Observed / Cloud': 'Tidak Teramati / Awan',
       // ESA WorldCover
       'Shrubland': 'Semak',
+      'Shrubs': 'Semak',
       'Grassland': 'Padang Rumput',
+      'Grasslands': 'Padang Rumput',
       'Cropland': 'Lahan Pertanian',
       'Built-up': 'Terbangun',
       'Barren/sparse vegetation': 'Lahan Gundul/Vegetasi Jarang',
@@ -3450,9 +3610,13 @@
       'Barren': 'Lahan Gundul',
       'Bare': 'Lahan Terbuka',
       'Shrub': 'Semak',
+      'Evergreen Needleleaf Forest': 'Hutan Konifer Hijau',
       'Evergreen Needleleaf Forests': 'Hutan Konifer Hijau',
+      'Evergreen Broadleaf Forest': 'Hutan Berdaun Lebar Hijau',
       'Evergreen Broadleaf Forests': 'Hutan Berdaun Lebar Hijau',
+      'Deciduous Needleleaf Forest': 'Hutan Konifer Gugur',
       'Deciduous Needleleaf Forests': 'Hutan Konifer Gugur',
+      'Deciduous Broadleaf Forest': 'Hutan Berdaun Lebar Gugur',
       'Deciduous Broadleaf Forests': 'Hutan Berdaun Lebar Gugur',
       'Mixed Forests': 'Hutan Campuran',
       'Closed Shrublands': 'Semak Tertutup',
@@ -3461,13 +3625,56 @@
       'Savannas': 'Sabana',
       'Permanent Wetlands': 'Lahan Basah Permanen',
       'Croplands': 'Lahan Pertanian',
+      'Urban and Built-up': 'Perkotaan dan Terbangun',
       'Urban and Built-up Lands': 'Perkotaan dan Lahan Terbangun',
+      'Cropland/Natural Mosaic': 'Mosaik Pertanian/Alami',
       'Cropland/Natural Vegetation Mosaics': 'Mosaik Pertanian/Vegetasi Alami',
       'Permanent Snow and Ice': 'Salju dan Es Permanen',
+      'Snow and Ice': 'Salju dan Es',
       'Barren Land': 'Lahan Gundul',
       'Water Bodies': 'Badan Air',
+      'Water bodies': 'Badan Air',
       'Non-Forest': 'Non-Hutan',
       'Non Forest': 'Non-Hutan',
+      // Copernicus Global Land Cover
+      'Herbaceous vegetation': 'Vegetasi Herba',
+      'Cultivated': 'Lahan Budidaya',
+      'Urban / Built-up': 'Perkotaan / Terbangun',
+      'Bare / Sparse': 'Lahan Gundul / Jarang',
+      'Permanent water': 'Perairan Permanen',
+      'Closed forest, evergreen needleleaf': 'Hutan Tertutup, Konifer Hijau',
+      'Closed forest, evergreen broadleaf': 'Hutan Tertutup, Berdaun Lebar Hijau',
+      'Closed forest, deciduous needleleaf': 'Hutan Tertutup, Konifer Gugur',
+      'Closed forest, deciduous broadleaf': 'Hutan Tertutup, Berdaun Lebar Gugur',
+      'Closed forest, mixed': 'Hutan Tertutup, Campuran',
+      'Closed forest, unknown': 'Hutan Tertutup, Tidak Diketahui',
+      'Open forest, evergreen needleleaf': 'Hutan Terbuka, Konifer Hijau',
+      'Open forest, evergreen broadleaf': 'Hutan Terbuka, Berdaun Lebar Hijau',
+      'Open forest, deciduous needleleaf': 'Hutan Terbuka, Konifer Gugur',
+      'Open forest, deciduous broadleaf': 'Hutan Terbuka, Berdaun Lebar Gugur',
+      'Open forest, mixed': 'Hutan Terbuka, Campuran',
+      'Open forest, unknown': 'Hutan Terbuka, Tidak Diketahui',
+      'Ocean': 'Laut',
+      // ESA GlobCover
+      'Post-flooding or irrigated croplands': 'Lahan Pertanian Irigasi/Pasca-Banjir',
+      'Rainfed croplands': 'Lahan Pertanian Tadah Hujan',
+      'Mosaic cropland / vegetation': 'Mosaik Pertanian / Vegetasi',
+      'Mosaic vegetation / cropland': 'Mosaik Vegetasi / Pertanian',
+      'Broadleaf evergreen / semi-deciduous forest': 'Hutan Berdaun Lebar Hijau / Semi-Gugur',
+      'Broadleaf deciduous forest, closed': 'Hutan Berdaun Lebar Gugur, Tertutup',
+      'Broadleaf deciduous forest, open': 'Hutan Berdaun Lebar Gugur, Terbuka',
+      'Needleleaf evergreen forest': 'Hutan Konifer Hijau',
+      'Needleleaf forest, open': 'Hutan Konifer, Terbuka',
+      'Mixed broadleaf / needleleaf forest': 'Hutan Campuran Berdaun Lebar / Konifer',
+      'Mosaic forest-shrub / grassland': 'Mosaik Hutan-Semak / Padang Rumput',
+      'Mosaic grassland / forest-shrub': 'Mosaik Padang Rumput / Hutan-Semak',
+      'Sparse vegetation': 'Vegetasi Jarang',
+      'Flooded forest, fresh/brackish water': 'Hutan Tergenang, Air Tawar/Payau',
+      'Flooded forest, saline water': 'Hutan Tergenang, Air Asin',
+      'Artificial surfaces': 'Permukaan Buatan',
+      'Bare areas': 'Area Gundul',
+      'Permanent snow and ice': 'Salju dan Es Permanen',
+      'Unclassified': 'Tidak Terklasifikasi',
     };
 
     function translateLulcClass(name) {
@@ -3530,7 +3737,7 @@
     function rerenderLulcCharts() {
       // Re-render Carbon module land cover tables + pie charts
       if (analysisResults && analysisResults.landcover &&
-          typeof renderLandCoverTableAndChart === 'function') {
+        typeof renderLandCoverTableAndChart === 'function') {
         Object.keys(analysisResults.landcover).forEach(datasetKey => {
           const bucket = analysisResults.landcover[datasetKey];
           if (bucket && bucket.classes) {
@@ -3539,14 +3746,17 @@
           }
         });
         if (analysisResults.landcover_transition &&
-            typeof renderLandCoverTransition === 'function') {
+          typeof renderLandCoverTransition === 'function') {
           renderLandCoverTransition();
         }
       }
       // Re-render LCChange module charts
       if (typeof LCChange !== 'undefined' &&
-          LCChange.activeYears && LCChange.activeYears.length >= 2) {
+        LCChange.activeYears && LCChange.activeYears.length >= 2) {
         LCChange._renderAll(LCChange.activeYears);
+      }
+      if (activeResultLayerName && resultMap && legendControl) {
+        updateLegend(activeResultLayerName);
       }
     }
 
@@ -3801,6 +4011,7 @@
           Copernicus_LandCover: 100,
           ESA_GlobCover: 300,
           JAXA_FNF: 25,
+          JAXA_FNF4: 25,
           MapBiomas_Indonesia: 30
         }[$(this).val()] || 10;
         $('#transitionScale').val(String(nativeScale));
@@ -4723,7 +4934,7 @@
       legendControl = L.control({ position: 'bottomright' });
       legendControl.onAdd = function () {
         const div = L.DomUtil.create('div', 'legend');
-        div.innerHTML = '<h6 style="margin-bottom:10px;font-weight:bold;">Legend</h6>';
+        div.innerHTML = `<h6 style="margin-bottom:10px;font-weight:bold;">${currentLanguage === 'id' ? 'Legenda' : 'Legend'}</h6>`;
 
         if (layerName === 'carbon_estimated' || layerName === 'carbon_reference') {
           // Carbon legend with gradient
@@ -4774,7 +4985,7 @@
             div.innerHTML += `
           <div class="legend-item">
             <span class="legend-color" style="background:${d.color}"></span>
-            ${nm} (${d.percentage}%)
+            ${translateLulcClass(nm)} (${d.percentage}%)
           </div>`;
           }
         } else if (layerName === 'ESA_WorldCover') {
@@ -4793,7 +5004,7 @@
               div.innerHTML += `
             <div class="legend-item">
               <span class="legend-color" style="background:${d.color}"></span>
-              ${nm} (${d.percentage}%)
+              ${translateLulcClass(nm)} (${d.percentage}%)
             </div>`;
             }
           } else {
@@ -4822,7 +5033,7 @@
               div.innerHTML += `
             <div class="legend-item">
               <span class="legend-color" style="background:${d.color}"></span>
-              ${nm} (${d.percentage}%)
+              ${translateLulcClass(nm)} (${d.percentage}%)
             </div>`;
             }
           }
@@ -4836,11 +5047,11 @@
             div.innerHTML += `
             <div class="legend-item">
               <span class="legend-color" style="background:${d.color}"></span>
-              ${nm} (${d.percentage}%)
+              ${translateLulcClass(nm)} (${d.percentage}%)
             </div>`;
           }
         } else {
-          div.innerHTML += '<div class="text-muted">No legend for this layer</div>';
+          div.innerHTML += `<div class="text-muted">${currentLanguage === 'id' ? 'Tidak ada legenda untuk layer ini' : 'No legend for this layer'}</div>`;
         }
 
         return div;
@@ -4985,6 +5196,7 @@
     }
 
     function switchResultLayer(layerName) {
+      activeResultLayerName = layerName;
       // Remove all existing layers
       for (const key in geeTileLayers) {
         if (geeTileLayers[key]) {
@@ -5505,7 +5717,7 @@
         lcClasses = analysisResults.landcover.ESA_WorldCover.classes;
       }
 
-      if (lcClasses) {
+      if (false && lcClasses) {
         const totalHa = Object.values(lcClasses)
           .reduce((s, c) => s + Number(c.area || 0), 0);
         html += `
@@ -5514,7 +5726,7 @@
                 <div class="metric-icon"><i class="fa-solid fa-earth-asia"></i></div>
                 <div class="metric-value">${totalHa.toLocaleString(undefined, { maximumFractionDigits: 1 })}
                     <small>ha</small></div>
-                <div class="metric-label">Total Area</div>
+                <div class="metric-label">${lcChangeText('Luas Total', 'Total Area')}</div>
             </div>
         </div>
         `;
@@ -5612,22 +5824,11 @@
         let dominantClass = '';
         let dominantPercentage = 0;
 
-        // Try Dynamic World first
-        if (analysisResults.landcover.Dynamic_World?.classes) {
-          const classes = analysisResults.landcover.Dynamic_World.classes;
-          totalArea = Object.values(classes).reduce((sum, c) => sum + Number(c.area || 0), 0);
+        const preferredDataset = ['Dynamic_World', 'ESA_WorldCover', 'ESRI_LandCover', 'MapBiomas_Indonesia', 'JAXA_FNF4', 'JAXA_FNF', 'Copernicus_LandCover', 'ESA_GlobCover', 'MODIS_LandCover']
+          .find(key => analysisResults.landcover?.[key]?.classes);
 
-          // Find dominant class
-          Object.entries(classes).forEach(([name, data]) => {
-            if (data.percentage > dominantPercentage) {
-              dominantClass = name;
-              dominantPercentage = data.percentage;
-            }
-          });
-        }
-        // Fallback to ESA
-        else if (analysisResults.landcover.ESA_WorldCover?.classes) {
-          const classes = analysisResults.landcover.ESA_WorldCover.classes;
+        if (preferredDataset) {
+          const classes = analysisResults.landcover[preferredDataset].classes;
           totalArea = Object.values(classes).reduce((sum, c) => sum + Number(c.area || 0), 0);
 
           Object.entries(classes).forEach(([name, data]) => {
@@ -5646,7 +5847,7 @@
             <div class="metric-value">${totalArea.toLocaleString(undefined, { maximumFractionDigits: 1 })}
               <small>ha</small>
             </div>
-            <div class="metric-label">Total Area</div>
+            <div class="metric-label">${lcChangeText('Luas Total', 'Total Area')}</div>
           </div>
         </div>
       `;
@@ -5660,8 +5861,8 @@
             <div class="metric-value">${dominantPercentage.toFixed(1)}
               <small>%</small>
             </div>
-            <div class="metric-label">${dominantClass}</div>
-            <small class="text-muted">Dominant Class</small>
+            <div class="metric-label">${translateLulcClass(dominantClass)}</div>
+            <small class="text-muted">${lcChangeText('Kelas Dominan', 'Dominant Class')}</small>
           </div>
         </div>
       `;
@@ -5672,7 +5873,7 @@
         <div class="metric-card">
           <div class="metric-icon"><i class="fa-solid fa-layer-group"></i></div>
           <div class="metric-value">${datasetsAnalyzed}</div>
-          <div class="metric-label">Dataset${datasetsAnalyzed > 1 ? 's' : ''} Analyzed</div>
+          <div class="metric-label">${lcChangeText('Dataset Dianalisis', `Dataset${datasetsAnalyzed > 1 ? 's' : ''} Analyzed`)}</div>
         </div>
       </div>
     `;
@@ -6606,10 +6807,19 @@
     function showLoading(mainText, subText, progress = 0) {
       // Start timer
       processStartTime = Date.now();
+      const safeProgress = Math.max(0, Math.min(100, Number(progress) || 0));
+      const isIndeterminate = safeProgress <= 0;
+      const progressLabel = currentLanguage === 'en'
+        ? (isIndeterminate ? 'Waiting for server response' : `Step estimate: ~${safeProgress}%`)
+        : (isIndeterminate ? 'Menunggu respons server' : `Estimasi tahap: ±${safeProgress}%`);
 
       $('#loadingText').text(mainText);
       $('#loadingSubtext').text(subText);
-      $('#loadingProgress').css('width', progress + '%');
+      $('#loadingProgress')
+        .css('width', (isIndeterminate ? 100 : safeProgress) + '%')
+        .attr('aria-valuenow', safeProgress)
+        .toggleClass('loading-progress-indeterminate', isIndeterminate);
+      $('#loadingProgressLabel').text(progressLabel);
 
       // Add timer display
       if ($('#loadingTimer').length === 0) {
@@ -6683,6 +6893,471 @@
       const alertEl = $(alertHtml).appendTo('body');
       setTimeout(() => alertEl.fadeOut(() => alertEl.remove()), duration);
     }
+
+    const DisasterMapping = {
+      map: null,
+      layerGroup: null,
+      boundaryLayer: null,
+      officialLayerGroup: null,
+      demLayer: null,
+      eventLayer: null,
+      lastCells: [],
+
+      labels: {
+        flood: 'Banjir',
+        fire: 'Kebakaran Lahan',
+        landslide: 'Longsor',
+        drought: 'Kekeringan'
+      },
+
+      levels: [
+        { key: 'low', label: 'Rendah', color: '#2e7d32', min: 0, max: 34 },
+        { key: 'medium', label: 'Sedang', color: '#f9a825', min: 34, max: 58 },
+        { key: 'high', label: 'Tinggi', color: '#ef6c00', min: 58, max: 78 },
+        { key: 'critical', label: 'Kritis', color: '#c62828', min: 78, max: 101 }
+      ],
+
+      getAoiBounds() {
+        if (!currentAOI) return null;
+        if (currentAOI.geometry?.getSouthWest && currentAOI.geometry?.getNorthEast) return currentAOI.geometry;
+        if (currentAOI.geojson) return L.geoJSON(currentAOI.geojson).getBounds();
+        return null;
+      },
+
+      ensureMap() {
+        if (this.map) {
+          setTimeout(() => this.map.invalidateSize(), 80);
+          return;
+        }
+
+        this.map = L.map('disasterMap', { zoomControl: true }).setView([-6.9667, 110.4167], 9);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors',
+          maxZoom: 18
+        }).addTo(this.map);
+        this.layerGroup = L.layerGroup().addTo(this.map);
+        this.officialLayerGroup = L.layerGroup().addTo(this.map);
+      },
+
+      escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[char]));
+      },
+
+      getAoiPayload() {
+        if (!currentAOI) return null;
+        if (currentAOI.geojson) return { geojson: currentAOI.geojson };
+        return {
+          west: currentAOI.geometry.getWest(),
+          south: currentAOI.geometry.getSouth(),
+          east: currentAOI.geometry.getEast(),
+          north: currentAOI.geometry.getNorth()
+        };
+      },
+
+      initializeDateInputs() {
+        const pad = n => String(n).padStart(2, '0');
+        const fmt = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+        const today = new Date();
+        const afterStart = new Date(today);
+        afterStart.setDate(today.getDate() - 30);
+        const beforeEnd = new Date(afterStart);
+        beforeEnd.setDate(afterStart.getDate() - 1);
+        const beforeStart = new Date(beforeEnd);
+        beforeStart.setDate(beforeEnd.getDate() - 60);
+        const defaults = {
+          disasterBeforeStart: fmt(beforeStart),
+          disasterBeforeEnd: fmt(beforeEnd),
+          disasterAfterStart: fmt(afterStart),
+          disasterAfterEnd: fmt(today)
+        };
+        Object.entries(defaults).forEach(([id, value]) => {
+          const el = document.getElementById(id);
+          if (el && !el.value) el.value = value;
+        });
+      },
+
+      updateAoiStatus() {
+        const el = document.getElementById('disasterAoiStatus');
+        if (!el) return;
+        if (!currentAOI) {
+          el.className = 'alert alert-warning py-2';
+          el.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Belum ada AOI. Pilih AOI di modul Analisis Stok Karbon.';
+        } else {
+          el.className = 'alert alert-success py-2';
+          el.innerHTML = `<i class="fas fa-check-circle"></i> <strong>${currentAOI.name}</strong> · ${currentAOI.area} km²`;
+        }
+      },
+
+      scoreCell(type, latMid, lngMid, row, col, grid, intensity) {
+        const latWave = Math.abs(Math.sin((latMid + 8.4) * 2.7));
+        const lngWave = Math.abs(Math.cos((lngMid - 108.9) * 2.1));
+        const north = grid <= 1 ? 0 : 1 - (row / (grid - 1));
+        const south = grid <= 1 ? 0 : row / (grid - 1);
+        const east = grid <= 1 ? 0 : col / (grid - 1);
+        const centerDist = Math.abs(row - (grid - 1) / 2) + Math.abs(col - (grid - 1) / 2);
+        const center = 1 - Math.min(1, centerDist / grid);
+        const intensityBoost = intensity === 'extreme' ? 18 : intensity === 'elevated' ? 9 : 0;
+
+        let score = 0;
+        if (type === 'flood') score = 32 + (south * 18) + (center * 22) + (latWave * 18);
+        if (type === 'fire') score = 30 + (east * 15) + (lngWave * 28) + ((1 - center) * 10);
+        if (type === 'landslide') score = 28 + (north * 24) + (latWave * 20) + (center * 12);
+        if (type === 'drought') score = 26 + (lngWave * 24) + (south * 18) + ((1 - latWave) * 14);
+        return Math.max(5, Math.min(98, score + intensityBoost));
+      },
+
+      levelFor(score) {
+        return this.levels.find(level => score >= level.min && score < level.max) || this.levels[0];
+      },
+
+      run() {
+        this.updateAoiStatus();
+        if (!currentAOI) {
+          showAlert('Pilih AOI terlebih dahulu di modul Analisis Stok Karbon.', 'warning', 5000);
+          return;
+        }
+
+        const bounds = this.getAoiBounds();
+        if (!bounds?.isValid?.()) {
+          showAlert('AOI tidak valid untuk pemetaan bencana.', 'danger', 5000);
+          return;
+        }
+
+        this.ensureMap();
+        this.layerGroup.clearLayers();
+        if (this.boundaryLayer) this.map.removeLayer(this.boundaryLayer);
+
+        if (currentAOI.geojson) {
+          this.boundaryLayer = L.geoJSON(currentAOI.geojson, {
+            style: { color: '#1565c0', weight: 2, fill: false }
+          }).addTo(this.map);
+        } else {
+          this.boundaryLayer = L.rectangle(bounds, {
+            color: '#1565c0', weight: 2, fill: false
+          }).addTo(this.map);
+        }
+
+        const type = document.getElementById('disasterType')?.value || 'flood';
+        const intensity = document.getElementById('disasterIntensity')?.value || 'normal';
+        const grid = parseInt(document.getElementById('disasterGridSize')?.value || '7', 10);
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+        const latStep = (ne.lat - sw.lat) / grid;
+        const lngStep = (ne.lng - sw.lng) / grid;
+        const totalAreaHa = Number(currentAOI.area || 0) * 100;
+        const cellAreaHa = totalAreaHa > 0 ? totalAreaHa / (grid * grid) : 0;
+        const summary = { low: 0, medium: 0, high: 0, critical: 0 };
+        this.lastCells = [];
+
+        for (let row = 0; row < grid; row++) {
+          for (let col = 0; col < grid; col++) {
+            const south = sw.lat + row * latStep;
+            const north = south + latStep;
+            const west = sw.lng + col * lngStep;
+            const east = west + lngStep;
+            const latMid = (south + north) / 2;
+            const lngMid = (west + east) / 2;
+            const score = this.scoreCell(type, latMid, lngMid, row, col, grid, intensity);
+            const level = this.levelFor(score);
+            summary[level.key] += cellAreaHa;
+
+            const rect = L.rectangle([[south, west], [north, east]], {
+              color: level.color,
+              weight: 0.7,
+              fillColor: level.color,
+              fillOpacity: 0.46
+            }).bindTooltip(`${this.labels[type]} · ${level.label}<br>Skor: ${score.toFixed(0)}`, { sticky: true });
+            rect.addTo(this.layerGroup);
+            this.lastCells.push({ score, level: level.key, areaHa: cellAreaHa });
+          }
+        }
+
+        this.map.fitBounds(bounds, { padding: [24, 24], maxZoom: 11 });
+        this.renderSummary(type, intensity, summary, totalAreaHa);
+        this.renderLegend();
+        setTimeout(() => this.map.invalidateSize(), 80);
+      },
+
+      renderSummary(type, intensity, summary, totalAreaHa) {
+        const dominant = Object.entries(summary).sort((a, b) => b[1] - a[1])[0];
+        const dominantLevel = this.levels.find(level => level.key === dominant?.[0]) || this.levels[0];
+        const highRiskHa = (summary.high || 0) + (summary.critical || 0);
+        const highRiskPct = totalAreaHa > 0 ? (highRiskHa / totalAreaHa) * 100 : 0;
+        document.getElementById('disasterSummary').innerHTML = `
+          <div class="col-md-4">
+            <div class="metric-card">
+              <div class="metric-value">${this.labels[type]}</div>
+              <div class="metric-label">Jenis Bencana</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="metric-card">
+              <div class="metric-value" style="color:${dominantLevel.color}">${dominantLevel.label}</div>
+              <div class="metric-label">Risiko Dominan</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="metric-card">
+              <div class="metric-value">${highRiskPct.toFixed(1)}<small>%</small></div>
+              <div class="metric-label">Risiko Tinggi + Kritis</div>
+            </div>
+          </div>
+        `;
+      },
+
+      renderLegend() {
+        document.getElementById('disasterLegend').innerHTML = this.levels.map(level => `
+          <span class="d-inline-flex align-items-center gap-1">
+            <span style="width:14px;height:14px;border-radius:3px;background:${level.color};display:inline-block;border:1px solid rgba(0,0,0,.2);"></span>
+            ${level.label}
+          </span>
+        `).join('');
+      },
+
+      async run() {
+        this.updateAoiStatus();
+        if (!currentAOI) {
+          showAlert('Pilih AOI terlebih dahulu di modul Analisis Stok Karbon.', 'warning', 5000);
+          return;
+        }
+
+        const bounds = this.getAoiBounds();
+        if (!bounds?.isValid?.()) {
+          showAlert('AOI tidak valid untuk pemetaan bencana.', 'danger', 5000);
+          return;
+        }
+
+        this.ensureMap();
+        this.layerGroup.clearLayers();
+        if (this.boundaryLayer) this.map.removeLayer(this.boundaryLayer);
+        if (this.eventLayer) this.map.removeLayer(this.eventLayer);
+
+        if (currentAOI.geojson) {
+          this.boundaryLayer = L.geoJSON(currentAOI.geojson, {
+            style: { color: '#1565c0', weight: 2, fill: false }
+          }).addTo(this.map);
+        } else {
+          this.boundaryLayer = L.rectangle(bounds, {
+            color: '#1565c0', weight: 2, fill: false
+          }).addTo(this.map);
+        }
+
+        const type = document.getElementById('disasterType')?.value || 'flood';
+        document.getElementById('disasterSummary').innerHTML = `
+          <div class="col-12">
+            <div class="alert alert-info py-2 mb-0">
+              <i class="fas fa-spinner fa-spin"></i> Memproses citra sebelum/sesudah untuk ${this.labels[type]}...
+            </div>
+          </div>`;
+
+        const res = await apiClient.analyzeDisasterEvent({
+          event_type: type,
+          aoi: this.getAoiPayload(),
+          before_start: document.getElementById('disasterBeforeStart')?.value,
+          before_end: document.getElementById('disasterBeforeEnd')?.value,
+          after_start: document.getElementById('disasterAfterStart')?.value,
+          after_end: document.getElementById('disasterAfterEnd')?.value
+        });
+
+        if (!res.success) {
+          document.getElementById('disasterSummary').innerHTML = `
+            <div class="col-12">
+              <div class="alert alert-danger py-2 mb-0">${this.escapeHtml(res.error)}</div>
+            </div>`;
+          return;
+        }
+
+        const data = res.data || {};
+        if (data.tile_url) {
+          this.eventLayer = L.tileLayer(data.tile_url, {
+            opacity: 0.72,
+            attribution: data.source || 'Earth Engine'
+          }).addTo(this.map);
+        }
+
+        this.map.fitBounds(bounds, { padding: [24, 24], maxZoom: 11 });
+        this.renderEventSummary(data);
+        this.renderEventLegend(data.legend || []);
+        setTimeout(() => this.map.invalidateSize(), 80);
+      },
+
+      renderEventSummary(data) {
+        document.getElementById('disasterSummary').innerHTML = `
+          <div class="col-md-4">
+            <div class="metric-card">
+              <div class="metric-value">${this.escapeHtml(this.labels[data.event_type] || data.event_type)}</div>
+              <div class="metric-label">Jenis Bencana</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="metric-card">
+              <div class="metric-value">${Number(data.area_ha || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}<small> ha</small></div>
+              <div class="metric-label">Area Terdampak Terdeteksi</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="metric-card">
+              <div class="metric-value">${this.escapeHtml(data.scale)}<small> m</small></div>
+              <div class="metric-label">Resolusi Analisis</div>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="alert alert-secondary py-2 mb-0 small">
+              <strong>${this.escapeHtml(data.title)}</strong> · ${this.escapeHtml(data.source)}<br>
+              Sebelum: ${this.escapeHtml(data.before_period?.start)} s/d ${this.escapeHtml(data.before_period?.end)}
+              · Sesudah: ${this.escapeHtml(data.after_period?.start)} s/d ${this.escapeHtml(data.after_period?.end)}<br>
+              ${this.escapeHtml(data.method_note)}
+            </div>
+          </div>
+        `;
+      },
+
+      renderEventLegend(items) {
+        document.getElementById('disasterLegend').innerHTML = items.map(item => `
+          <span class="d-inline-flex align-items-center gap-1">
+            <span style="width:14px;height:14px;border-radius:3px;background:${item.color};display:inline-block;border:1px solid rgba(0,0,0,.2);"></span>
+            ${this.escapeHtml(item.label)}
+          </span>
+        `).join('');
+      },
+
+      async loadOfficialSources() {
+        this.ensureMap();
+        const box = document.getElementById('disasterOfficialSources');
+        box.innerHTML = '<div class="alert alert-info py-2"><i class="fas fa-spinner fa-spin"></i> Memuat konfigurasi sumber resmi...</div>';
+        const res = await apiClient.getDisasterSources();
+        if (!res.success) {
+          box.innerHTML = `<div class="alert alert-danger py-2">${this.escapeHtml(res.error)}</div>`;
+          return;
+        }
+        const src = res.data || {};
+        if (this.officialLayerGroup) this.officialLayerGroup.clearLayers();
+
+        if (src.inarisk?.configured && src.inarisk.tile_url) {
+          L.tileLayer(src.inarisk.tile_url, {
+            opacity: 0.62,
+            attribution: 'BNPB InaRISK'
+          }).addTo(this.officialLayerGroup);
+        } else if (src.inarisk?.configured && src.inarisk.wms_url && src.inarisk.layers) {
+          L.tileLayer.wms(src.inarisk.wms_url, {
+            layers: src.inarisk.layers,
+            format: 'image/png',
+            transparent: true,
+            opacity: 0.62,
+            attribution: 'BNPB InaRISK'
+          }).addTo(this.officialLayerGroup);
+        }
+
+        if (src.demnas?.configured && src.demnas.tile_url) {
+          L.tileLayer(src.demnas.tile_url, {
+            opacity: 0.48,
+            attribution: 'BIG DEMNAS'
+          }).addTo(this.officialLayerGroup);
+        } else if (src.demnas?.configured && src.demnas.wms_url && src.demnas.layers) {
+          L.tileLayer.wms(src.demnas.wms_url, {
+            layers: src.demnas.layers,
+            format: 'image/png',
+            transparent: true,
+            opacity: 0.48,
+            attribution: 'BIG DEMNAS'
+          }).addTo(this.officialLayerGroup);
+        }
+
+        const card = (key, item) => `
+          <div class="col-md-4">
+            <div class="alert ${item.configured ? 'alert-success' : 'alert-warning'} py-2 h-100 mb-0">
+              <strong>${this.escapeHtml(item.name)}</strong>
+              <div class="small">${this.escapeHtml(item.type)}</div>
+              <div class="small">${item.configured ? 'Terkonfigurasi' : 'Belum dikonfigurasi di .env'}</div>
+              <a href="${this.escapeHtml(item.official_url)}" target="_blank" rel="noopener" class="small">Sumber resmi</a>
+            </div>
+          </div>`;
+        box.innerHTML = `<div class="row g-2">${Object.entries(src).map(([key, item]) => card(key, item)).join('')}</div>`;
+      },
+
+      async loadBmkgAlerts() {
+        const box = document.getElementById('disasterAlerts');
+        box.innerHTML = '<div class="alert alert-info py-2"><i class="fas fa-spinner fa-spin"></i> Mengambil peringatan dini BMKG...</div>';
+        const res = await apiClient.getBmkgAlerts(20);
+        if (!res.success) {
+          box.innerHTML = `<div class="alert alert-warning py-2"><strong>BMKG belum bisa dimuat.</strong> ${this.escapeHtml(res.error)}</div>`;
+          return;
+        }
+        const alerts = res.data?.alerts || [];
+        if (!alerts.length) {
+          box.innerHTML = '<div class="alert alert-success py-2">Tidak ada peringatan BMKG pada feed yang dikonfigurasi.</div>';
+          return;
+        }
+        box.innerHTML = `
+          <div class="card">
+            <div class="card-header bg-info text-white py-2">
+              <i class="fas fa-cloud-showers-heavy"></i> Peringatan Dini BMKG (${alerts.length})
+            </div>
+            <div class="list-group list-group-flush" style="max-height:260px;overflow:auto;">
+              ${alerts.map(alert => `
+                <div class="list-group-item">
+                  <div class="fw-semibold">${this.escapeHtml(alert.title || alert.area || 'Peringatan BMKG')}</div>
+                  <div class="small text-muted">${this.escapeHtml(alert.published_at || '')}</div>
+                  <div class="small">${this.escapeHtml(alert.description || '').slice(0, 260)}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>`;
+      },
+
+      async loadDemSlope() {
+        if (!currentAOI) {
+          showAlert('Pilih AOI terlebih dahulu sebelum memuat DEM.', 'warning', 5000);
+          return;
+        }
+        this.ensureMap();
+        const box = document.getElementById('disasterOfficialSources');
+        box.innerHTML = '<div class="alert alert-info py-2"><i class="fas fa-spinner fa-spin"></i> Menghitung kemiringan lereng dari DEM...</div>';
+        const res = await apiClient.analyzeDemSlope({ aoi: this.getAoiPayload(), scale: 90 });
+        if (!res.success) {
+          box.innerHTML = `<div class="alert alert-danger py-2">${this.escapeHtml(res.error)}</div>`;
+          return;
+        }
+        if (this.demLayer) this.map.removeLayer(this.demLayer);
+        this.demLayer = L.tileLayer(res.data.tile_url, {
+          opacity: 0.58,
+          attribution: res.data.is_official_demnas ? 'BIG DEMNAS' : 'USGS SRTM fallback'
+        }).addTo(this.map);
+        box.innerHTML = `
+          <div class="alert ${res.data.is_official_demnas ? 'alert-success' : 'alert-warning'} py-2">
+            <strong>Layer kemiringan lereng aktif.</strong>
+            Sumber: ${this.escapeHtml(res.data.source)}.
+            Rata-rata: ${Number(res.data.stats?.mean_slope_deg || 0).toFixed(1)}°,
+            Maksimum: ${Number(res.data.stats?.max_slope_deg || 0).toFixed(1)}°.
+            ${res.data.is_official_demnas ? '' : '<div class="small mt-1">DEMNAS belum dikonfigurasi; layer ini memakai fallback DEM global.</div>'}
+          </div>`;
+        document.getElementById('disasterLegend').innerHTML = (res.data.legend || []).map(item => `
+          <span class="d-inline-flex align-items-center gap-1">
+            <span style="width:14px;height:14px;border-radius:3px;background:${item.color};display:inline-block;border:1px solid rgba(0,0,0,.2);"></span>
+            ${this.escapeHtml(item.label)}
+          </span>
+        `).join('');
+      }
+    };
+
+    window.DisasterMapping = DisasterMapping;
+    window.onModuleShown = function (moduleName) {
+      if (moduleName === 'disaster') {
+        DisasterMapping.initializeDateInputs();
+        DisasterMapping.updateAoiStatus();
+        if (DisasterMapping.map) {
+          setTimeout(() => DisasterMapping.map.invalidateSize(), 120);
+        }
+      }
+      if (moduleName === 'lc-change' && typeof LCChange !== 'undefined') {
+        setTimeout(() => {
+          LCChange.resizeChangeMap?.();
+          LCChange.resizeOriginalMap?.();
+        }, 120);
+      }
+    };
 
     $('#carbonReferenceDataset').on('change', function () {
       updateDatasetDescription();
@@ -6904,12 +7579,26 @@
       yearData: {},  // { year: { classes, total_area_ha, year, ... } }
       activeDataset: 'Dynamic_World',
       activeYears: [],  // sorted year array after successful analysis
+      changeMap: null,
+      changeMapLayer: null,
+      changeMapBoundary: null,
+      changeMapMode: 'changed',
+      changeMapCache: {},
+      changeMapRequestKey: null,
+      originalMap: null,
+      originalMapLayer: null,
+      originalMapBoundary: null,
+      activeOriginalYear: null,
+      activePair: null,
 
       // ── Dataset metadata ───────────────────────────────────────
       DATASET_NOTES: {
         Dynamic_World: 'Near real-time · Tersedia tiap tahun (2015+)',
         ESA_WorldCover: 'Tersedia: 2020, 2021 · Tahun lain → data terdekat',
         ESRI_LandCover: 'Tersedia: 2017–2023 · Luar range → batas terdekat',
+        MapBiomas_Indonesia: 'Indonesia tahunan 2000–2023 · kelas hutan, gambut, sawit, tambang, urban',
+        JAXA_FNF4: 'Forest/Non-Forest 4 kelas 2017–2020 · relevan untuk monitoring hutan/karbon',
+        JAXA_FNF: 'Forest/Non-Forest 2007–2018 · sederhana untuk baseline hutan',
       },
 
       // ── Hardcoded color fallbacks (same as backend legends) ────
@@ -6933,6 +7622,13 @@
           'Scrub/Shrub': '#EDE9E4', 'Built area': '#F2FAFF',
           'Bare ground': '#C8C8C8', 'Snow/Ice': '#DEE4FF',
           Clouds: '#45C2A5', Rangeland: '#B1FF05',
+        },
+        JAXA_FNF4: {
+          'Dense Forest': '#006400', 'Non-Dense Forest': '#00a000',
+          'Non-Forest': '#feff99', Water: '#0000ff',
+        },
+        JAXA_FNF: {
+          Forest: '#006400', 'Non-Forest': '#feff99', Water: '#0000ff',
         },
       },
 
@@ -7045,6 +7741,20 @@
 
         this.activeDataset = dataset;
         this.yearData = {};
+        this.changeMapCache = {};
+        if (this.changeMap) {
+          this.changeMap.remove();
+          this.changeMap = null;
+          this.changeMapLayer = null;
+          this.changeMapBoundary = null;
+        }
+        if (this.originalMap) {
+          this.originalMap.remove();
+          this.originalMap = null;
+          this.originalMapLayer = null;
+          this.originalMapBoundary = null;
+          this.activeOriginalYear = null;
+        }
 
         const btn = document.getElementById('lcChangeRunBtn');
         btn.disabled = true;
@@ -7117,11 +7827,25 @@
       _populatePairSelector(years) {
         const sel = document.getElementById('lcPairSelector');
         sel.innerHTML = '';
+        const yearSel = document.getElementById('lcOriginalYearSelect');
+        if (yearSel) yearSel.innerHTML = '';
         for (let i = 0; i < years.length - 1; i++) {
           const o = document.createElement('option');
           o.value = i;
           o.textContent = `${years[i]} → ${years[i + 1]}`;
           sel.appendChild(o);
+        }
+        if (yearSel) {
+          years.forEach((year, index) => {
+            const o = document.createElement('option');
+            const effectiveYear = this.yearData[year]?.year;
+            o.value = year;
+            o.textContent = effectiveYear && effectiveYear !== year ? `${year} (data ${effectiveYear})` : String(year);
+            if (index === 0) o.selected = true;
+            yearSel.appendChild(o);
+          });
+          this.activeOriginalYear = years[0];
+          this.showOriginalYearMap(years[0]);
         }
         sel.onchange = () => {
           const i = parseInt(sel.value);
@@ -7134,6 +7858,7 @@
         const clsA = this.yearData[yearA]?.classes || {};
         const clsB = this.yearData[yearB]?.classes || {};
         const trans = this._computeTransitions(clsA, clsB);
+        this.activePair = { yearA, yearB };
 
         document.getElementById('lcChangePeriodLabel').textContent = `${yearA} → ${yearB}`;
 
@@ -7141,6 +7866,7 @@
         this._renderMatrix(trans, yearA, yearB);
         this._renderNetChange(clsA, clsB, yearA, yearB);
         this._renderSummaryTable(trans, clsA, clsB, yearA, yearB);
+        this._renderChangeMap(yearA, yearB);
       },
 
       // ── Transition approximation ───────────────────────────────
@@ -7480,6 +8206,307 @@
       },
 
       // ── Utility: resize Plotly chart on tab switch ─────────────
+      _zoomMapOut(map, steps = 1) {
+        if (!map) return;
+        setTimeout(() => {
+          const z = map.getZoom();
+          if (Number.isFinite(z)) map.setZoom(Math.max(z - steps, 5));
+        }, 0);
+      },
+
+      _aoiAreaHa() {
+        const km2 = Number((typeof currentAOI !== 'undefined' && currentAOI?.area) || 0);
+        return Number.isFinite(km2) ? km2 * 100 : 0;
+      },
+
+      _coverageWarning(totalHa) {
+        const aoiHa = this._aoiAreaHa();
+        if (!aoiHa || !totalHa || totalHa >= aoiHa * 0.92) return '';
+        const pct = (totalHa / aoiHa) * 100;
+        return ` · <span class="text-warning fw-semibold">${lcChangeText('cakupan valid', 'valid coverage')}: ${pct.toFixed(1)}%</span>`;
+      },
+
+      _noDataLegend(totalHa) {
+        return this._coverageWarning(totalHa)
+          ? `<span class="d-inline-flex align-items-center gap-1">
+              <span style="width:12px;height:12px;background:#f8fafc;display:inline-block;border:1px dashed #64748b;border-radius:2px;"></span>
+              ${lcChangeText('No Data/Masked (basemap terlihat)', 'No Data/Masked (basemap visible)')}
+            </span>`
+          : '';
+      },
+
+      _ensureChangeMap() {
+        const el = document.getElementById('lcChangeMap');
+        if (!el || this.changeMap) return;
+
+        const center = (typeof currentAOI !== 'undefined' && currentAOI?.geometry?.getCenter)
+          ? currentAOI.geometry.getCenter()
+          : { lat: -6.9667, lng: 110.4167 };
+
+        this.changeMap = L.map('lcChangeMap', {
+          zoomControl: true,
+          attributionControl: true,
+        }).setView([center.lat, center.lng], 10);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(this.changeMap);
+
+        if (typeof currentAOI !== 'undefined' && currentAOI) {
+          if (currentAOI.geojson) {
+            this.changeMapBoundary = L.geoJSON(currentAOI.geojson, {
+              style: { color: '#ef4444', weight: 2, fillOpacity: 0.06 }
+            }).addTo(this.changeMap);
+            this.changeMap.fitBounds(this.changeMapBoundary.getBounds(), { padding: [28, 28], maxZoom: 10 });
+            this._zoomMapOut(this.changeMap, 1);
+          } else if (currentAOI.geometry) {
+            this.changeMapBoundary = L.rectangle(currentAOI.geometry, {
+              color: '#ef4444', weight: 2, fillOpacity: 0.06
+            }).addTo(this.changeMap);
+            this.changeMap.fitBounds(currentAOI.geometry, { padding: [28, 28], maxZoom: 10 });
+            this._zoomMapOut(this.changeMap, 1);
+          }
+        }
+      },
+
+      resizeChangeMap() {
+        setTimeout(() => {
+          this._ensureChangeMap();
+          if (this.changeMap) this.changeMap.invalidateSize();
+        }, 150);
+      },
+
+      setChangeMapMode(mode) {
+        this.changeMapMode = mode;
+        ['Changed', 'Destination', 'Before', 'After'].forEach(name => {
+          document.getElementById(`lcChangeMapMode${name}`)?.classList.toggle('active', mode === name.toLowerCase());
+        });
+        if (this.activePair) this._drawChangeMapLayer(this.activePair.yearA, this.activePair.yearB);
+      },
+
+      async _renderChangeMap(yearA, yearB) {
+        const status = document.getElementById('lcChangeMapStatus');
+        const legend = document.getElementById('lcChangeMapLegend');
+        if (!status || !legend) return;
+
+        this._ensureChangeMap();
+        this.resizeChangeMap();
+
+        const dataset = this.activeDataset;
+        const startMonth = parseInt(document.getElementById('lcChangeStartMonth').value);
+        const endMonth = parseInt(document.getElementById('lcChangeEndMonth').value);
+        const cacheKey = `${dataset}:${yearA}:${yearB}:${startMonth}:${endMonth}`;
+        this.changeMapRequestKey = cacheKey;
+
+        if (this.changeMapCache[cacheKey]) {
+          this._drawChangeMapLayer(yearA, yearB);
+          return;
+        }
+
+        status.className = 'alert alert-info py-2 mb-2';
+        status.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${lcChangeText('Memuat peta perubahan', 'Loading change map')} ${yearA} → ${yearB}...`;
+        legend.innerHTML = '';
+
+        const payload = typeof buildAOIPayload === 'function' ? buildAOIPayload() : null;
+        if (!payload) {
+          status.className = 'alert alert-warning py-2 mb-2';
+          status.textContent = lcChangeText('AOI tidak tersedia untuk peta perubahan.', 'AOI is not available for the change map.');
+          return;
+        }
+
+        try {
+          const res = await apiClient.analyzeLandCoverChangeMap({
+            aoi: payload,
+            dataset,
+            from_year: yearA,
+            to_year: yearB,
+            start_month: startMonth,
+            end_month: endMonth,
+          });
+
+          if (this.changeMapRequestKey !== cacheKey) return;
+
+          if (!res.success || !res.data) {
+            status.className = 'alert alert-warning py-2 mb-2';
+            status.textContent = res.error || lcChangeText('Peta perubahan tidak tersedia.', 'Change map is not available.');
+            return;
+          }
+
+          this.changeMapCache[cacheKey] = res.data;
+          this._drawChangeMapLayer(yearA, yearB);
+        } catch (err) {
+          status.className = 'alert alert-danger py-2 mb-2';
+          status.textContent = err.message || lcChangeText('Gagal memuat peta perubahan.', 'Failed to load change map.');
+        }
+      },
+
+      _drawChangeMapLayer(yearA, yearB) {
+        const status = document.getElementById('lcChangeMapStatus');
+        const legend = document.getElementById('lcChangeMapLegend');
+        if (!status || !legend) return;
+
+        this._ensureChangeMap();
+        const startMonth = parseInt(document.getElementById('lcChangeStartMonth').value);
+        const endMonth = parseInt(document.getElementById('lcChangeEndMonth').value);
+        const cacheKey = `${this.activeDataset}:${yearA}:${yearB}:${startMonth}:${endMonth}`;
+        const data = this.changeMapCache[cacheKey];
+        if (!data || !this.changeMap) return;
+
+        if (this.changeMapLayer) {
+          this.changeMap.removeLayer(this.changeMapLayer);
+          this.changeMapLayer = null;
+        }
+
+        const tileUrlByMode = {
+          changed: data.changed_tile_url,
+          destination: data.destination_tile_url,
+          before: data.from_tile_url,
+          after: data.to_tile_url,
+        };
+        const tileUrl = tileUrlByMode[this.changeMapMode] || data.changed_tile_url;
+
+        if (tileUrl) {
+          this.changeMapLayer = L.tileLayer(tileUrl, {
+            attribution: '© Google Earth Engine',
+            opacity: this.changeMapMode === 'changed' ? 0.78 : 0.88,
+            maxZoom: 18,
+          }).addTo(this.changeMap);
+        }
+
+        const effectiveNote = data.from_effective_year !== yearA || data.to_effective_year !== yearB
+          ? ` · ${lcChangeText('data efektif', 'effective data')}: ${data.from_effective_year} → ${data.to_effective_year}`
+          : '';
+
+        status.className = 'alert alert-success py-2 mb-2';
+        status.innerHTML = `
+          <i class="fas fa-check-circle"></i>
+          ${yearA} → ${yearB}${effectiveNote} ·
+          ${lcChangeText('berubah', 'changed')}: <strong>${Number(data.changed_area_ha || 0).toLocaleString('id-ID')} ha</strong>
+          (${Number(data.changed_percentage || 0).toFixed(2)}%)
+          ${this._coverageWarning(Number(data.changed_area_ha || 0) + Number(data.stable_area_ha || 0))}
+        `;
+
+        if (['destination', 'before', 'after'].includes(this.changeMapMode)) {
+          const legendYear = this.changeMapMode === 'before' ? yearA : yearB;
+          const classes = this.yearData[legendYear]?.classes || {};
+          const title = this.changeMapMode === 'destination'
+            ? lcChangeText('Kelas tujuan pada piksel berubah', 'Destination classes on changed pixels')
+            : `${lcChangeText('Tutupan lahan', 'Land cover')} ${legendYear}`;
+          legend.innerHTML = Object.entries(classes)
+            .sort((a, b) => (b[1].area || 0) - (a[1].area || 0))
+            .map(([name, cls]) => `
+              <span class="d-inline-flex align-items-center gap-1">
+                <span style="width:12px;height:12px;background:${cls.color};display:inline-block;border:1px solid rgba(0,0,0,.18);border-radius:2px;"></span>
+                ${translateLulcClass(name)}
+              </span>
+            `).join('');
+          legend.innerHTML = `<strong>${title}:</strong> ${legend.innerHTML} ${this._noDataLegend(Number(data.changed_area_ha || 0) + Number(data.stable_area_ha || 0))}`;
+        } else {
+          legend.innerHTML = `
+            <span class="d-inline-flex align-items-center gap-1">
+              <span style="width:12px;height:12px;background:#ff1744;display:inline-block;border-radius:2px;"></span>
+              ${lcChangeText('Area berubah', 'Changed area')}
+            </span>
+            ${this._noDataLegend(Number(data.changed_area_ha || 0) + Number(data.stable_area_ha || 0))}
+          `;
+        }
+
+        this.resizeChangeMap();
+      },
+
+      _ensureOriginalMap() {
+        const el = document.getElementById('lcOriginalYearMap');
+        if (!el || this.originalMap) return;
+
+        const center = (typeof currentAOI !== 'undefined' && currentAOI?.geometry?.getCenter)
+          ? currentAOI.geometry.getCenter()
+          : { lat: -6.9667, lng: 110.4167 };
+
+        this.originalMap = L.map('lcOriginalYearMap', {
+          zoomControl: true,
+          attributionControl: true,
+        }).setView([center.lat, center.lng], 10);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(this.originalMap);
+
+        if (typeof currentAOI !== 'undefined' && currentAOI) {
+          if (currentAOI.geojson) {
+            this.originalMapBoundary = L.geoJSON(currentAOI.geojson, {
+              style: { color: '#ef4444', weight: 2, fillOpacity: 0.06 }
+            }).addTo(this.originalMap);
+            this.originalMap.fitBounds(this.originalMapBoundary.getBounds(), { padding: [28, 28], maxZoom: 10 });
+            this._zoomMapOut(this.originalMap, 1);
+          } else if (currentAOI.geometry) {
+            this.originalMapBoundary = L.rectangle(currentAOI.geometry, {
+              color: '#ef4444', weight: 2, fillOpacity: 0.06
+            }).addTo(this.originalMap);
+            this.originalMap.fitBounds(currentAOI.geometry, { padding: [28, 28], maxZoom: 10 });
+            this._zoomMapOut(this.originalMap, 1);
+          }
+        }
+      },
+
+      resizeOriginalMap() {
+        setTimeout(() => {
+          this._ensureOriginalMap();
+          if (this.originalMap) this.originalMap.invalidateSize();
+          if (this.activeOriginalYear) this.showOriginalYearMap(this.activeOriginalYear);
+        }, 150);
+      },
+
+      showOriginalYearMap(year) {
+        const status = document.getElementById('lcOriginalMapStatus');
+        const legend = document.getElementById('lcOriginalMapLegend');
+        if (!status || !legend || !year) return;
+
+        this._ensureOriginalMap();
+        this.activeOriginalYear = year;
+
+        const bucket = this.yearData[year];
+        if (!bucket?.tile_url) {
+          status.className = 'alert alert-warning py-2 mb-2';
+          status.textContent = lcChangeText('Peta asli tidak tersedia untuk tahun ini.', 'Original map is not available for this year.');
+          return;
+        }
+
+        if (this.originalMapLayer) {
+          this.originalMap.removeLayer(this.originalMapLayer);
+          this.originalMapLayer = null;
+        }
+
+        this.originalMapLayer = L.tileLayer(bucket.tile_url, {
+          attribution: '© Google Earth Engine',
+          opacity: 0.88,
+          maxZoom: 18,
+        }).addTo(this.originalMap);
+
+        const effectiveYear = bucket.year;
+        const effectiveNote = effectiveYear && effectiveYear !== year
+          ? ` · ${lcChangeText('data efektif', 'effective data')}: ${effectiveYear}`
+          : '';
+
+        status.className = 'alert alert-success py-2 mb-2';
+        status.innerHTML = `
+          <i class="fas fa-check-circle"></i>
+          ${lcChangeText('Menampilkan peta LULC asli', 'Showing original LULC map')} ${year}${effectiveNote} ·
+          ${Number(bucket.total_area_ha || 0).toLocaleString('id-ID')} ha
+          ${this._coverageWarning(Number(bucket.total_area_ha || 0))}
+        `;
+
+        legend.innerHTML = Object.entries(bucket.classes || {})
+          .sort((a, b) => (b[1].area || 0) - (a[1].area || 0))
+          .map(([name, cls]) => `
+            <span class="d-inline-flex align-items-center gap-1">
+              <span style="width:12px;height:12px;background:${cls.color};display:inline-block;border:1px solid rgba(0,0,0,.18);border-radius:2px;"></span>
+              ${translateLulcClass(name)} (${Number(cls.percentage || 0).toFixed(1)}%)
+            </span>
+          `).join('') + this._noDataLegend(Number(bucket.total_area_ha || 0));
+
+        if (this.originalMap) this.originalMap.invalidateSize();
+      },
+
       resizePlot(id) {
         setTimeout(() => {
           const el = document.getElementById(id);
